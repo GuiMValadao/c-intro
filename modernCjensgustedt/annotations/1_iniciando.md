@@ -47,12 +47,14 @@ No livro, é colocado esforço na escrita de programas C 'corretos' que garantem
 >`> c17 -Wall -o getting-started getting-started.c -lm`
 
 > **No meu computador executei com o seguinte comando:**
->> **`> cl -Wall -o getting-started getting-started.c`**
+>
+>>   **`> cl -Wall -o getting-started getting-started.c`**
+>
 > **Recebi um aviso que -o seria depreciado e -lm não é um comando reconhecido (no Windows); -o serve para definir o nome do executáve, no Windows usa -Fe<nome_saida>, por exemplo -Ferenomear**
 
-O compilar deveria fazer o trabalho dele sem reclamar e retornar um arquivo executável chamado getting-started na pasta atual. Na linha de exemplo:
+O compilador deveria fazer o trabalho dele sem reclamar e retornar um arquivo executável chamado getting-started na pasta atual. Na linha de exemplo:
 * `c17`(`cl`) é o programa compilador
-* `-Wall` pede para nos avisar de qualquer coisa que julgue incomum
+* `-Wall` pede para nos avisar de qualquer coisa que pareça incomum
 * `-o getting-started` diz para salvar a saída do compilador em um arquivo nomeado `getting-started`.
 * `getting-started.c` é o nome do *arquivo fonte*, que contém o código C que escrevemos. Note que a extensão .c no fim do nome do arquivo refere-se à linguagem de programação C.
 * `-lm` diz a acrescentar algumas funções numéricas padrões se necessário; precisaremos delas posteriormente.
@@ -88,4 +90,4 @@ bad.obj
 ```
 
 Alguns compiladores (GCC e o cl, usado por mim) ainda assim produzem um executável, outros (Clang) nem chegam a criar o executável após os erros encontrados. Foram retornados 3 diagnósticos: eles esperam um tipo de retorno diferente da função `main`; esperam a especificação de onde a função `printf` deve vir (como `#include <stdlib.h>` ou `#include <stdio.h>`); e detectam que o tipo de retorno da função main é incorreto para o especificado. Dependendo da plataforma, pode-se forçar o compilador e rejeitar programas que produzem tais diagnósticos. Para GCC, essa opção de linha-de-comando é -Werror, fazendo com que o GCC comporte-se igual ao Clang. 
-> Para o compilador cl no Windows, em vez de -Werror, usa-se `-we<numero_erro>`, por exemplo `-we4255`.
+> Para o compilador `cl` no Windows, em vez de -Werror, usa-se `-we<numero_erro>`, por exemplo `-we4255`.
