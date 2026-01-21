@@ -188,3 +188,16 @@ for (size_t i = 0; i < max_iterations; ++i) {
 ```
 
 Nestes exemplos, usando uma macro padrão `fabs`, que vem com o cabeçalho <tgmath.h>. Ela calcula o valor absoluto de um double. O programa heron_aprox.c é o programa completo que implementa o mesmo algoritmo, onde `fabs` foi substituída por várias comparações explícitas com certos números fixos: por exemplo, eps1m24 definido como sendo 1-1x2^-24 ou eps1p24 como 1+ 1x2^-24. Veremos mais tarde (seção 5.3) como os literais 0x1p-24 (2^-24) e parecidos usados nestas definições funcionam e como interagem com o construto constexpr.
+
+Na primeira parte, o produto entre o número atual sob investigação `a` com a estimativa atual `x` é comparado com 1.5 e 0.5, e então `x` é multiplicado por 0.5 ou 2 até o produto tornar-se próximo de 1. Então, a aproximação de Heron, como mostrado no código, é usada em uma segunda iteração para fechar e computar a inversa multiplicativa com um alto grau de acurácia.
+
+A tarefa geral do programa é computar o inverso de todos os números que são fornecidos a ele na linha de comando. Um exemplo de execução pode ser:
+
+```
+> ./heron 0.07 5 6E+23
+heron: a=7.00000e-02, x=1.42857e+01, a*x=0.999999999996
+heron: a=5.00000e+00, x=2.00000e-01, a*x=0.999999999767
+heron: a=6.00000e+23, x=1.66667e-24, a*x=0.999999997028
+```
+
+Para processar os números na linha de comando, o programa usa outra função da biblioteca strod de <stdlib.h>.
