@@ -200,4 +200,83 @@ heron: a=5.00000e+00, x=2.00000e-01, a*x=0.999999999767
 heron: a=6.00000e+23, x=1.66667e-24, a*x=0.999999997028
 ```
 
-Para processar os números na linha de comando, o programa usa outra função da biblioteca strod de <stdlib.h>.
+Para processar os números na linha de comando, o programa usa outra função `strtod` da biblioteca <stdlib.h>.
+
+## 3.3 Múltiplas seleções
+
+A última declaração de controle que C oferece é a declaração `switch`, que é outra declaração de seleção. É principalmente usada quando uma sequência grande de construtos if-else tornaria-se tediosa:
+
+```
+if (arg == 'm') {
+    puts("this is a magpie");
+} else if (arg == 'r') {
+    puts("this is a raven");
+} else if (arg == 'j') {
+    puts("this is a jay");
+} else if (arg == 'c') {
+    puts("this is a chough");
+} else {
+    puts("this is an unknown corvid");
+}
+```
+
+Neste caso, temos uma escolha que é mais complexa que uma decisão verdadeiro-falso e que pode ter vários resultados. Podemos simplificar como segue:
+
+```
+switch (arg) {
+    case 'm' : puts("this is a magpie");
+               break;
+    case 'r' : puts("this is a raven");
+               break;
+    case 'j' : puts("this is a jay");
+               break;
+    case 'c' : puts("this is a chough");
+               break;
+    default: puts("this is an unknown corvid");
+}
+```
+
+Aqui, selecionamos uma das chamadas a `puts` de acordo com o valor da variável `arg`. Como printf, a função puts é fornecida por <stdio.h>. Ela exibe uma linha com a string que recebe como argumento. Demos casos específicos para caracteres 'm', 'r', 'j' e 'c' e um caso especial rotulado 'default'. O caso default é ativado se arg não equivale a nenhum dos valores de case.
+
+Sintáticamente, uma switch é tão simples quanto `switch (expression) secondary-block` e sua semântica é bastante direta: os rótulos `case` e `default` servem como *alvos de pulo*. De acordo com o valor da expressão, o controle continua na declaração que é rotulada de acordo. Se encontramos uma declaração `break`, a switch em que ela apareceu é finalizada, e o controle do programa é transferido para a próxima declaração após a switch. Por essa especificação, declarações switch podem ser usadas mais amplamente que construtos if-else iterados:
+
+```
+switch (count) {
+    default: puts("++++ .... +++");
+    case 4: puts("++++");
+    case 3: puts("+++");
+    case 2: puts("++");
+    case 1: puts("+");
+    case 0:         // antes do C23 esta linha também deveria terminar com ;
+}
+```
+
+Assim que pulamos para o bloco secundário, a execução continua até encontrar break ou o fim do bloco. Neste caso, como não existem declarações break, acabamos executando todas as declarações puts subsequentes. Por exemplo, a saída quando o valor de count é 3 é um triângulo com 3 linhas:
+
+```
++++
+++
++
+```
+
+A estrutura de uma switch pode ser mais flexível que if-else, mas é restrita de outras maneiras.
+
+** expressões de `case` precisam ser expressões constantes inteiras.
+** valores de `case` devem ser únicos para cada declaração `switch`.
+
+Na seção 5.6.2 veremos o que são essas expressões em detalhes. Por hora, é suficiente saber que elas precisam ter valores fixos que fornecemos diretamente na fonte, como 4, 3, 2, 1, 0 no exemplo acima. Em particular, variáveis como count apenas são permitidas na parte switch, não nos casos individuais.
+
+A maior flexibilidade da declaração switch vem com um preço: é mais suscetível a erros. Em particular, poderíamos acidentalmente pular a definição das variáveis:
+
+```
+switch (x) {
+    unsigned tmp = 45;
+    ...
+    case 0: printf("the temp is %u\n", tmp); // tmp pode não ter sido inicializada.
+}
+```
+
+Variáveis dessa tipo são válidas, mas seu inicializador pode não ter sido visto, por exemplo, quando x é zero. Assim, nesse caso, a execução de um programa onde x coincide com 0 seria errada. A inicialização (ou sua falta) será discutida em maior detalhe na seção 5.5
+
+Antes de C23, o local dos rótulos de case era ainda mais restrito. Eles tinha necessariamente que marcar uma declaração: rótulos na frente de declarações ou logo após a chave de encerramento } de uma declaração composta não eram válidos.
+
