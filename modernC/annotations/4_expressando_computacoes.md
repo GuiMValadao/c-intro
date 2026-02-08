@@ -35,3 +35,42 @@ Para trabalhar com eles, você pode precisar ter de pular de uma tabela para out
 
 ![Tabela 4.3](imagens\tabela_4_3.png)
 
+## 4.2 Aritmética
+
+Os operadores aritméticos formam o primeiro grupo da tabela 4.1 de operadores que atuam em operandos.
+
+*4.2.1. +, - e * :* Funcionam, em geral, como esperaríamos computando a soma, subtração e multiplicação, respectivamente:
+
+```
+size_t a = 45;
+size_t b = 7;
+size_t c = (a - b) * 2;
+size_t d = a - b * 2;
+```
+
+Aqui, `c ` deve ser igual a 76, e `d` a 31. Como pode ver deste pequeno exemplo, sub-expressões podem ser agrupadas com parênteses para forçar uma ordem de operações preferencial.
+
+Além disso, os operadores + e - tem variantes unárias (unary). -b dá o negativo de b: um valor a de modo que b + a seja 0. +a fornece simplesmente o valor de a.
+
+Mesmo tendo usado um tipo sem sinal(unsigned) para nossa computação, a negação e diferença por meio do operador `-` são *bem definidas*. Isto é, independente dos valores que fornecemos para esta abstração, nossa computação sempre terá um resultado válido. De fato, uma das propriedades milagrosas de size_t é que a aritmética +-* sempre funciona onde pode. Enquanto o resultado matemético final estiver dentro do domínio(range) [0, SIZE_MAX], então o resultado será o valor da expressão.
+
+Quando o resultado não está dentro do domínio e, assim, não é representável como um valor size_t, chamamos de transbordamento (*overflow*) aritmético. O transbordamento pode ocorrer, por exemplo, se multiplicarmos dois valores que são tão grandes que seu produto matemático é maior que SIZE_MAX. Vamos olhar em como C lida com o transbordamento na próxima seção.
+
+*4.2.2 Divisão e resto:* Os operadores / e % são um pouco mais complexos pois correspondem à divisão de inteiros e a operação de resto. a/b é avaliado como o número de vezes que b cabe dentro de a, e a%b é o valor restante após o número máximo de b's serem removidos de a. Os operadores / e % vem em pares: se temos z = a/b, o restande a%b pode ser computado como a - z*b. Para valores sem sinal, `a == (a/b)*b + (a%b)`.
+
+Um exemplo familiar do operador % são as horas no relógio. Imagine que temos um relógio de 12 horas: 6 horas após 8:00 são 2:00. A maioria das pessoas conseguem computar diferenças temporais em relógios de 12 e 24 horas. Esta computação corresponde a a % 12: em nosso exemplo, (8 + 6) % 12 == 2 -- o programa clock_24 exemplifica esta situação. Outro uso similar para % é a computação usando minutos em uma hora, na forma a % 60.
+
+Existe apenas um valor não permitido para essas operações: 0. A divisão por zero é proibida.
+
+O operador % também pode ser usado para explicar aritmética multiplicativa e aditiva em tipos sem sinal um pouco melhor. Como já mencionado, quando um tipo sem sinal recebe um valor fora de seu domínio, é dito que transborda. Neste caso, o resultado é reduzido como se o operador % tivesse sido usado. O valor resultado "enrola" (wraps around) em torno do domínio do tipo. No caso de size_t, o domínio é de 0 até SIZE_MAX. Aritmética em size_t implicitamente computa modulo SIZE_MAX + 1.
+
+Isto significa que para valores size_t, SIZE_MAX + 1 é igual a 0, e 0 - 1 é igual a SIZE_MAX. Este 'enrolamento' é a mágica que faz os operadores `-` funcionarem para tipos sem sinal. Por exemplo, o valor -1 interpretado como um size_t é igual a SIZE_MAX; então acrescentar -1 a um valor `a` apenas calcula `a + SIZE_MAX`, que enrola acabando em:
+
+a + SIZE_MAX - (SIZE_MAX + 1) = a - 1
+
+Os operadores / e % tem a boa propriedade que seus resultados são sempre menores ou iguais a seus operandos. Assimm, aritmética sem sinal com operadores / e % nunca transbordará.
+
+## 4.3 Operadores que modificam objetos
+
+
+
