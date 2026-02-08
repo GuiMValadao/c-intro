@@ -27,5 +27,11 @@ O conceito de 'números que não podem ser negativos' que nos referimos para siz
 * Tabela 4.2 lista os que atuam em objetos.
 * Tabela 4.3 lista as que atuam em tipos.
 
-Para trabalhar com eles, você pode precisar ter de pular de uma tabela para outra.
+Para trabalhar com eles, você pode precisar ter de pular de uma tabela para outra. Por exemplo, se quer resolver uma expressão como a + 5, onde a é algua variável de tipo unsigned, primeiro precisará ir à terceira linha da tabela 4.2 para avaliar a. Então, pode usar a terceira linha na tabela 4.1 para deduzir que o valor de a e 5 são combinados em uma operação aritmética: a +. Não se frustre se não entender tudo nessas tabelas. Vários conceitos que são mencionados ainda não foram introduzidos; elas estão listadas aqui para criar uma referência para o livro inteiro.
+
+![Tabela 4.1](imagens\tabela_4_1.png)
+
+![Tabela 4.2](imagens\tabela_4_2.png)
+
+![Tabela 4.3](imagens\tabela_4_3.png)
 
