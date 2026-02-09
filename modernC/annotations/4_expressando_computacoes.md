@@ -95,3 +95,68 @@ Mas esse tipo de combinação para vários objetos de uma vez costuma ser desinc
 Para os operadores de acréscimo e decréscimo, existem outras duas formas: *postfix increment* (acréscimo pós-fixo) e *postfix decrement* (decréscimo pós-fixo). Eles diferem do que já vimos no resultado que fornecem à expressão que o cerca. As versões prefixadas desses operadores(++a e --a) fazem a operação primeiro e então retornam o resultado; as operações pós-fixas retornam o valor antes da operação e realizam a modificação depois. Para qualquer um deles, o efeito na variável é o mesmo: o valor aumentado ou diminuído. Tudo isso mostra que a avaliação de expressões com efeitos colaterais pode ser difícil de seguir. Não faça isso.
 
 ## 4.4 Contexto booleano
+
+Várias operações fornecem (yield) um valor 0 ou 1, dependendo da verificação de alguma condição. Eles podem ser agrupados em duas categorias: avaliações comparativas e lógicas.
+
+*4.4.1 Comparação:* Em nossos exemplos, já vimos os operadores de comparação ==, !=, < e >. Enquando os últimos dois realizam comparações estritas entre seus operandos, os operadores <= e >= realizam as comparações "menos que ou igual" e "maior que ou igual" , respectivamente. Todos esses operadores podem ser usados em declarações de controle, como já vimos, mas são, na verdade, mais poderosos que isso.
+
+Operadores de comparação retornam o valor `false` ou `true`. Esses dois valores nada mais são que 0 e 1, respectivamente. Então podem ser usados em aritmética ou para indexação de matrizes. No código seguinte, c sempre será 1, e d será 1 se a e b são iguais, se não será 0.
+
+```
+size_t c = (a < b) + (a == b) + (a > b);
+size_t d = (a <= b) + (a >= b) - 1;
+```
+
+No próximo exemplo, N é um número grande, e o elemento da matriz sign[false] armazenará o número de valores em largeA que são maiores ou iguais a 1. 0 e sign[true] aqueles que são estritamente menores:
+
+```
+double largeA[N] = { };
+...
+/* Preenche largeA de alguma maneira */
+
+size_t sign[2] = { 0, 0 }
+for (size_t i = 0; i < N; ++i) {
+    sign[ (largeA[i] < 1.0)] += 1;
+}
+```
+
+Por fim, também existe um identificadot not_eq que pode ser usado como substituto para !=. Este recurso é raramente usado, e para usá-lo deve-se incluir o arquivo <iso646.h>.
+
+*4.4.2 Lógica:* Operadores lógicos operam em valores que já deveriam representar valores false ou true. Se não, as regras descritas para a execução condicional se aplicam primeiro. O operador `!` (not) nega o operando logicamente, e os operadores `&&` (and) é o 'e' lógico e `||`(or) é o 'ou' lógico. Os resultados desses operadores são sumarizados na tabela 4.4.
+
+![Tabela 4.4](imagens/ope_logico.png)
+
+De forma similar às operações de comparação, operações lógicas retornam valores de verdade, false ou true. Esses valores ainda assim são 0 e 1 e podem ser usados como índices:
+
+```
+double largeA[N] = { };
+...
+/* Preenche largeA de alguma maneira */
+
+size_t sign[2] = { 0, 0 }
+for (size_t i = 0; i < N; ++i) {
+    sign[!!(largeA[i] < 1.0)] += 1;
+}
+```
+
+Aqui, a expressão !!largeA[i] aplica o operador ! duas vezes e apenas garante que largeA[i] é avaliado como um valor verdade. Como resultado, a matriz de elementos isset[0] e isset[1] armazenarão o número de valores que são iguais a 0.0 e ineguais, respectivamente.
+
+Os operadores && e || tem uma propriedade particular chamada avaliação de curto-circuito. Este termo denota o fato que a avaliação do segundo operando é omitida se não for necessária para o resultado da operação:
+
+```
+// Isto nunca divide por 0
+if (b != 0 && ((a/b) > 1)) {
+    ++x;
+}
+```
+
+Aqui, a avaliação de a/b é omitida condicionalmente durante a execução, e, portanto, uma divisão por 0 nunca ocorrerá. O seguinte código é equivalente:
+
+```
+if (b) {
+    if (a/b > 1) {
+        ++x;
+    }
+}
+```
+
