@@ -72,5 +72,26 @@ Os operadores / e % tem a boa propriedade que seus resultados são sempre menore
 
 ## 4.3 Operadores que modificam objetos
 
+Outra operação importante que já vimos é a atribuição: `a = 42`. Como pode ver deste exemplo, este operador não é simétrico; tem um valor à direita e um objeto à esquerda. Em um abuso esquisito da linguagem, jargão C costuma se referir ao lado direito como *rvalue* (right value/valor à direita) e ao objeto na esquerda como *lvalue* (left value/valor à esquerda). Vamos tentar evitar este vocabulário sempre que possível; falar de valor e objeto é suficiente. C possui outros operadores de atribuição. Para qualquer operador binário @, todos os 5 que já vimos tinham a sintaxe: `an_object @= some_expression;`. Eles são apenas abreviações convenientes para combinar o operador aritmético @ e a atribuição; Um forma equivalente é: `an_object = (an_object @ (some_expression));`. Em outras palavras, existem os operadores +=, -=, *=, /= e %=. Por exemplo, em um loop for, o operador += pode ser usado:
+```
+for (size_t i = 0; i < 25; i += 7){
+    ...
+}
+```
 
+A sintaxe desses operadores é um pouco enjoada(picky). Você não pode ter espaço vazio entre os caracteres de operação diferentes, por exemplo, i + = 7 em vez de i += 7 é um erro de sintaxe.
 
+Já vimos duas outras operações que modificam objetos: o operador acréscimo ++ e decréscimo --. O primeiro é equivalente a i += 1 e o segundo a i -= 1.
+
+Todos esses operadores de atribuição são operadores reais. Eles retornam o valor do objeto após a modificação, mas não o próprio objeto. Você poderia escrever algo como:
+
+```
+a = b = c += ++d;
+a = (b = (c += (++d))); //Same
+```
+
+Mas esse tipo de combinação para vários objetos de uma vez costuma ser desincentivada (frowned upon). Não faça isso a menos que queira ofuscar seu código. Tais alterações para objetos que estão envolvidos em uma expressão são chamadas de efeitos colaterais.
+
+Para os operadores de acréscimo e decréscimo, existem outras duas formas: *postfix increment* (acréscimo pós-fixo) e *postfix decrement* (decréscimo pós-fixo). Eles diferem do que já vimos no resultado que fornecem à expressão que o cerca. As versões prefixadas desses operadores(++a e --a) fazem a operação primeiro e então retornam o resultado; as operações pós-fixas retornam o valor antes da operação e realizam a modificação depois. Para qualquer um deles, o efeito na variável é o mesmo: o valor aumentado ou diminuído. Tudo isso mostra que a avaliação de expressões com efeitos colaterais pode ser difícil de seguir. Não faça isso.
+
+## 4.4 Contexto booleano
