@@ -160,3 +160,57 @@ if (b) {
 }
 ```
 
+## 4.5 Operador ternário ou condicional
+
+O operador ternário é similar a uma declaração if, mas é uma expressão que retorna o valor do galho(branch) escolhido:
+
+```
+size_t size_min(size_t a, size_t b) {
+    return (a < b) ? a : b;
+}
+```
+
+Similar aos operadores && e ||, o segundo e terceiro operandos são avaliados apenas se forem necessários de fato. O macro sqrt de <tgmath.h> computa a raiz quadrada de um valor não-negativo. Chamá-la com um valor negativa levanta um erro de domínio:
+
+```
+#include <tgmath.h>
+
+#ifdef __STDC_NO_COMPLEX__
+# error "we need complex arithmetic"
+#endif
+
+double complex sqrt_real(double x) {
+    return (x < 0) ? CMPLX(0, sqrt(-x)) : CMPLX(sqrt(x), 0);
+}
+```
+
+Nesta função, sqrt é chamada apenas uma vez, e o argumento para chamá-la nunca será negativo. Assim, sqrt_real sempre se comportará corretamente; nenhum valor ruim será passado a ela.
+
+Aritmética de números complexos e as ferramentas usadas para isso precisam do cabeçalho <complex.h>, que é indiretamente incluída por <tgmath.h>. Ambos serão introduzidos mais tarde, na seção 5.7.8.
+
+No exemplo anterior, também vemos uma compilação condicional que é conseguida com diretivas pré-processador. O construto #ifdef garante que acessamos a condição #error apenas se o macro __STDC_NO_COMPLEX__ é definido.
+
+
+## 4.6 Ordem de avaliação
+
+Dos operadores até aqui, vimos que &&, || e ?: condicionam a avaliação de alguns de seus operandos: o primeiro operando, como é uma condição para as restantes, sempre será avaliada primeiro.
+
+A vírgula é o único operador que ainda não foi introduzido. Ele avalia seus operandos em ordem, e o resultado é o valor do operando à direita. Por exemplo, (f(a), f(b)) primeiro avalia f(a) e então f(b); o resultado é o valor de f(b).
+
+Saiba que o caractere vírgula tem outros papeis sintáticos em C que *não* usam a mesma convenção sobre avaliação. Por exemplo, as vírgulas que separam inicializações não tem as mesmas propriedades que aquelas que separam argumentos de funções. 
+
+O operador vírgula é raramenta útil em código limpo, e é uma armadilha para iniciantes: A[i, j] não é um índice bidimensional para uma matriz A, mas resulta em A[j].
+
+Outros operadores não tem restrições de avaliação. Por exemplo, em uma expressão como f(a) + g(b), não existe uma ordem pré-estabelecida especificando se f(a) ou g(b) deve ser computada primeiro. Se qualquer das funções f ou g possuem efeitos colaterais (por exemplo, se f modifica b por trás da cortina), o resultado da expressão dependerá da ordem escolhida.
+
+Esta ordem podem depender do compilador, da versão do compilador, opções da hora da compilação, ou apenas do código do entorno da expressão. Não dependa de qualquer dessas formas de sequênciação, elas vão atrapalhar.
+
+O mesmo é verdade para argumentos de funções. Em algo como:
+
+```
+printf("%g and %g\n", f(a), f(b));
+```
+
+não saberíamos qual dos dois últimos argumentos é avaliado primeiro.
+
+A única forma confiável de não depender da ordem de avaliação de expressões aritméticas é remover efeitos colaterais.
