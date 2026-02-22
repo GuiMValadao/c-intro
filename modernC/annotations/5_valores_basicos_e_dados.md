@@ -138,3 +138,77 @@ O padrão de C define muitos outros tipos, entre eles outros tipos aritméticos 
 Os dois tipos clock_t e time_t são usados para trabalhar com tempos. São tipos semânticos pois a precisão da computação de tempos pode ser diferentes entre plataformas diferentes. A forma de ter um tempo em segundos que pode ser usado em aritmética é a função difftime: ela computa a diferença de duas estampas temporais. Valores clock_t apresentam o modelo da plataforma de ciclos de relógio do processador, de modo que a unidade de tempo é normalmente muito menor que o segundo; CLOCKS_PER_SEC pode ser usado para converter esses valores para segundos.
 
 ## 5.3 Especificando valores
+
+Já vimos várias formas nas quais constantes numéricas (*literais*) podem ser especificadas:
+
+* 123       Literal decimal inteiro
+* 077       Literal octal inteiro - Especificado por uma sequência de dígitos, o primeiro sendo 0 e os restantes entre 0 e 7. Por exemplo, 077 tem o valor 63. Este tipo de especificação tem valor meramente historico e é raramente usado hoje em dia.
+* 0xFFFF    Literal hexadecimal inteiro - Especificado iniciando com 0x seguido por uma sequência de dígitos entre 0...9 e a...f. Por exemplo, 0xbeaf tem o valor 48815.
+* Literal binário inteiro - Especificado iniciando com 0b seguido por uma sequência de dígitos 0 ou 1. Por exemplo, 0b1010 tem o valor 10. Foram introduzidos com C23.
+* 1.7E-13   Literais decimais de ponto flutuante - Estes literais são bem familiares como a versão com um ponto decimal. Também existe a notação científica com um expoente. Em geral, a forma mEe é interpretada como m * 10 ^e.
+* 0x1.7aP-13    Literais hexadecimais de ponto flutuante - São normalmente usados para descrever valores de ponto flutuante de uma forma que facilita a especificação de valores que tem representações exatas. A forma geral 0xhPe é interpretada como h * 2^e. Aqui, h é especificado como uma fração hexadecimal. O expoente e ainda é especificado como um número decimal.
+* 'a'       Literal de caractere integral - Estes são caracteres colocados entre apóstrofes ', como 'a' ou '?'. Eles tem valores que são fixos apenas implicitamente pelo padrão C. Por exemplo, 'a' corresponte ao código inteiro para o caractere a do alfabeto latino. Entre literais de caracteres, o caractere \ tem significado especial. Por exemplo, já vimos '\\n' para o caractere de nova linha.
+* "hello"   Literais de string - Especificam texto, como os necessários para as funções printf e puts. De novo, o caracter \ é especial, assim como literais de caracteres.
+
+Todos os literais exceto o último são constantes numéricas: especificam números. Literais de string são uma exceção e podem ser usados para especificar texto que é conhecido no momento da compilação. Integrar textos maiores em nosso código poderia ser tedioso se não pudéssemos dividir literais de string em blocos:
+
+```
+puts("first line\n"
+     "another line\n"
+     "first and"
+     second part of the third line");
+```
+
+Ou seja, literais de string consecutivos são concatenados. 
+
+Literais numéricos nunca são negativos. Isto é, se escrevemos algo como -34 ou -1.5e-23, o sinal não é considerado parte do número mas é o operador *negação* aplicado ao número que vem depois dele. Apesar de parecer esrtanho, o sinal negativo do expoente é considerado parte de um literal de ponto flutuante.
+
+*Literais inteiros decimais tem sinal*. Para determinar o tipo exato para literais inteiros, sempre temos uma regra do *primeiro ajuste* (first fit): *Um literal decimal inteiro tem o primeiro dos três tipos com sinal que lhe cabem*. Esta regra pode ter efeitos surpreendentes. Suponha que em uma plataforma, o valor com sinal mínimo é -2^15 = -32 768 e o valor máximo 2^15 - 1 = 32 767. O literal 32 768, então, não cabe no tipo signed e é, assim, signed long. Como consequência, a expressão -32 768 tem tipo signed long. Assim, o valor mínimo do tipo signed nesta plataforma não pode ser escrito como um literal.
+
+*O mesmo valor pode ter tipos diferentes*. Deduzir o tipo de um literal binário, octal ou hexadecimal é um pouco mais complicado. Eles também podem ser de um tipo sem sinal se o valor não couber em um tipo com sinal. No exemplo anterior, o literal hexadecimal 0x7FFF tem o valor 32 767 e, portanto, é do tipo signed. Além do literal decimal, o literal 0x8000 (valor 32 768 escrito em hexadecimal) então é unsigned, e a expressão -0x8000 novamente é unsigned.
+
+*Não use literais binário, octal ou hexadecimais para valores negativos*. Como consequência, há apenas uma escolha para valores negativos: literais decimais.
+
+Um erro comum é tentar atribuir um literal hexadecimal a um tipo signed experando que represente um valor negativo. Considere uma declaração como int x = 0xFFFF FFFF. ISto é feito sob a assunção que o valor hexadecimal tem a mesma representação binária que o valor com sinal -1. Na maioria das arquiteturas com 32-bit signed, isto será verdade (mas não todas). Entretanto, então nada garante que o valor efetivo +4 294 967 295 seja convertido para o valor -1. A tabela 5.3 tem alguns exemplos de literais interessantes, seus valores e tipos.
+
+![Tabela 5.3 Exemplos de literais e seus tipos](imagens/tabela_5_3.png)
+
+Então um possível prefixo (0, 0b ou 0x) não apenas especifica a base na qual um literal inteiro é lido, mas indiretamente também pode influenciar o tipo deduzido. Este tipo deduzido pode ser alterado por um sufixo que é acrescentado ao literal. Por exemplo, 1U tem valor 1 e é do tipo unsigned, 1L é signed long, e 1ULL tem o mesmo valor 1 mas o tipo unsigned long long.
+
+Assim como sufixos, literais inteiros podem ser forçados a ter um tipo com um rank mínimo. Para um literal decimal inteiro, se há apenas um l ou L, o tipo é long se o valor cabe e long long se não. Se tem dois (ll ou LL), o tipo é fixo em long long. Para literais inteiros prefixados (0, 0b ou 0x), estes sufixos ainda podem ser unsigned long ou unsigned long long, dependendo do valor. Para forçar um tipo sem sinal, podemos acrescentar u ou U ao sufixo.
+
+O sufixo wb ou WB que foi introduzido com C23 força o litera a ter um tipo específico com precisão de bit. Com uma combinação possível de u ou U, é o único sufixo que podem garantir um tipo de uma sinal específico (? signedness) da base. Veremos esses tipos mais tarde na seção 5.7.7.
+
+*Literais diferentes podem ter o mesmo valor*
+
+*O valor efetivo de um decimal de ponto-flutuante pode diferir de seu valor literal*. Por exemplo, o literal 0.2 pode ter o valor 0.200 000 000 000 000 000 011 1. Como consequência, os literais 0,2 e 0.200 ... 011 1 tem o mesmo valor. 
+
+Literais hexadecimais de ponto-flutuante foram projetados para corresponder melhor com as representações binárias de valores de ponto flutuante. De fato, na maioria das arquiteturas modernas, tais literais (que não tem dígitos demais) corresponderão exatamente ao valor literalo. Infelizmente, são quase ilegíveis para humanos. Por exemplo, considere os dois literais:
+
+0x1.999 9AP-3 e 0xC.CCCC CCCC CCCC CCDP-6.
+
+Eles correspondem a
+
+1.600 000 023 84 * 2^-3 e 12.800 000 000 000 000 000 2 * 2^-6;
+
+assim, expressos como decimais de ponto flutuante, seus valores são aproximadamente
+
+0.200 000 002 98 e 0.200 000 000 000 000 000 003.
+
+Então os dois literais tem valores muito próximos entre si, enquanto sua representação como literais hexadecimais de ponto flutuante parecem colocá-los muito distante.
+
+Por fim, literais de ponto flutuante podem ser seguidos pela letra f ou F para denotar um float ou por l ou L para denotar um long double. De outro modo, eles serão do tipo double.
+
+5.3.1 Constantes complexas
+
+Tipos complexos não são necessariamente suportados por todas as plataformas C. Este fato pode ser conferido inspecionando __STDC_NO_COMPLEX__. Para ter suporte completo de tipos complexos, o cabeçalho <complex.h> deveria ser incluído. Se usar <tgmath.h> para funções numéricas, isto é feito implicitamente.
+
+C não possui literais de tipo complexo. Existem apenas diversas macros que podem facilitar a manipulação destes tipos.
+
+A primeira possibilidade para especificar valores ocmplexos é a macro CMPLX, que engloba dois valores de ponto-flutuante, as partes real e imaginária, em um valor complexo. Por exemplo, CMPLX(0.5, 0.5) é um valor double complex com as partes real e imaginárias de 0.5. Análogamente, existem um CMPLXF para float complex e CMPLXL para long double complex.
+
+Outra possibilidade mais conveniente é fornecida pela maxcro I, que representa um valor constante do tipo float complex de modo que I * I tem o valor -1. Nomes de macro de 1 caractere em letra maiúscula são bastante usados em programas para números que são fixos para o programa inteiro. Por si só, não é uma ideia brilhante (o número de nomes com 1 caractere é limitado), e é melhor deixar I de lado.
+
+I pode ser usado para especificar constantes de tipos complexos similares à notação matemática usual. Por exemplo, 0.5 + 0.5I seria do tipo double complex e 0.5F + 0.5FI do tipo float complex. O compilador converte implicitamente o resultado para os tipos maiores se misturarmos, por exemplo, float e double para as partes reais e imaginárias. Outra forma de codificar constantes complexas é usando literais complexos. Eles são literais de ponto flutuante com um i extra, por exemplo, 0.5i ou 0.5IF.
+
+## 5.4 Conversões implícitas
