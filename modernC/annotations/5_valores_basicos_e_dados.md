@@ -212,3 +212,61 @@ Outra possibilidade mais conveniente é fornecida pela maxcro I, que representa 
 I pode ser usado para especificar constantes de tipos complexos similares à notação matemática usual. Por exemplo, 0.5 + 0.5I seria do tipo double complex e 0.5F + 0.5FI do tipo float complex. O compilador converte implicitamente o resultado para os tipos maiores se misturarmos, por exemplo, float e double para as partes reais e imaginárias. Outra forma de codificar constantes complexas é usando literais complexos. Eles são literais de ponto flutuante com um i extra, por exemplo, 0.5i ou 0.5IF.
 
 ## 5.4 Conversões implícitas
+
+Como vimos nos exemplos, o tipo de um operando tem influência sobre o tipo de uma expressão de operador, como -1 ou -1U. Enquanto o primeiro é um signed int, o segundo é um unsigned int. Como unsigned não possui valores negativos, -1U é, na verdade, um número positivo grande. *- e = unários tem o tipo do seu operando promovido*.
+
+Assim, esses operadores são exemplos onde o tipo, geralmente, não muda. Em casos onde eles mudam, dependemos da estratégia de C para realizar *conversões implícitas*: isto é, alterar um valor com um tipo específiico para um com o tipo desejado. Considere os seguintes exemplos, novamente assumindo que -2 147 483 648 e 2 147 483 647 são os valores mínimo e máximo de um signed int, respectivamente:
+
+```
+double         a = 1;              // Inofensivo; o valor cabe no tipo
+signed short   b = -1;             // Inofensivo; o valor cabe no tipo
+signed int     c = 0x8000'0000;    // Perigoso; valor muito grande para o tipo
+signed int     d = -0x8000'0000;   // Perigoso; valor muito grande para o tipo
+signed int     e = -2'147'483'648; // Inofensivo; o valor cabe no tipo
+unsigned short g = 0x8000'0000;    // Perde informação; tem valor 0
+```
+
+Aqui, as inicializações de `a` e `b` são inofensivas pois seus valores cabem no tipo desejado, com o compilador C convertendo-os silenciosamente.
+
+As próximas duas conversões para `c` e `d` são problemáticas. Como vimos, 0x8000'0000 é do tipo unsigned int e não cabe em um signed int. Assim, `c` recebe um valor que é definido-por-implementação, e temos que saber o que nossa plataforma faz nesses casos. Poderia apenas reutilizar o padrão de bits  do valor à direita ou encerrar o programa. 
+
+Para o caso de `d`, a situação é ainda pior. 0x8000'0000 tem o valor 2 147 483 648, e poderíamos esperar que `-d` fosse só o valor negativo. Mas como -0x800'0000 é 2 147 483 648, o mesmo problema ocorre que foi visto para `c`.
+
+Então, `e` também é inofensivo pois usamos -2 147 483 648 como um literal decimal negado de tipo signed long, cujo valor efetivo é o informado. Como este valor cabe em signed int (é o valor mínimo), a caonversão pode ser feita sem problema.
+
+O último exemplo de `g` tem consequências ambíguas. Um valor que é muito grande para um tipo sem sinal é convertido de acordo com o módulo. Neste caso em particular, se assumimos que o valor máximo de unsigned short é 2^16 -1, o valor resultante é 0. É difícil dizer se esta conversão "estreitadora"  é o resultado desejado. *Evite conversões estreitadoras (narrowing)*. *Não use tipos estreitos em aritmética*.
+
+As regras dos tipos tornam-se ainda mais complicadas para operadores que tem dois operandos, como adição e multiplicação, pois eles, então, podem ter tipos diferentes. Alguns exemplos:
+
+```
+1         + 0.0     // Inofensivo; double
+1         + I       // Inofensivo; complex float
+INT_MAX   + 0..0F   // Pode perder precisão; float
+INT_MAX   + I       // Pode perder precisão; complex float
+INT_MAX   + 0.0     // Geralmente inofensivo; double
+```
+
+Neste caso, os dois primeiros exemplos são inofensivos: o valor o literal inteiro 1 cabe no tipo double ou complex float. De fato, na maioria desse tipo de operações miscigenadas, sempre que o alcance de um tipo cabe no alcance de outro, o resultado tem o tipo de maior alcance.
+
+Os próximos dois são problemáticos pois INT_MAX, o valor máximo de um signed int, normalmente não cabe em um float nem complex float. A última linha mostra que para uma operação com double, isto funcionaria na maioria das plataformas.
+
+Como não existe uma inclusão restrita de faixas de valores para tipos inteiros, deduzir o tamanho de uma operação que mistura valores com e sem sinal pode ser chato:
+
+```
+-1 < 0         // Verdadeiro, inofensivo, mesmo sinal
+-1L < 0        // Verdadeiro, inofensivo, mesmo sinal
+-1U < 0U       // Falso, inofensivo, mesmo sinal
+-1 < 0U        // Falso, perigoso, sinal misturado
+-1U < 0        // Falso, perigoso, sinal misturado
+-1L < 0U       // Depende, perigoso, mesmo sinal ou misturado
+-1LL < 0UL     // Depende, perigoso, mesmo sinal ou misturado
+```
+
+As primeiras três comparações são inofensivas pois mesmo que misturem operandos de tipos diferentes, não misturam a propriedade do sinal. Para estes casos, como as faixas de valores possíveis contém uma a outra, C somente converte o outro tipo para o maior e realiza a comparação nele.
+
+Os próximos dois casos não são ambíguos mas, talvez, não o que um programador inexperiente(naive) esperaria. De fato, para ambos, todos os operandos são convertidos para unsigned int. Assim, Ambos valores negados são convertidos para valores sem sinal grandes, e o resultado da comparação é falso.
+
+As últimas duas comparações são ainda mais problemáticas. Em plataformas onde INT_WIDTH < LONG_WIDTH, 0U é convertido para 0L, e, assim, o primeiro resultado é true. Em plataformas onde INT_WIDTH == LONG_WIDTH, -1L é convertido para -1U (Isto é, UINT_MAX), e, assim, a primeira comparação é false. Observações análogas se mantém para a segunda comparação dessas duas, mas o resultado das duas pode não ser o mesmo.
+
+*Evite operações com operandos de diferente sinal (signedness/ tipo signed e unsigned)*. *Use tipos sem sinal sempre que possível*. *Escolha seus tipos aritméticos de modo que conversões implícitas são inofensivas*.
+
