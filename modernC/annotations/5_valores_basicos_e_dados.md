@@ -306,3 +306,248 @@ T a = { };
 Este recurso foi introduzido apenas em C23; antes disso, tínha-se que usar { 0 }, e havia um raciocínio relativamente complicado que fazia isso funcionar. Este inicializador padrão também pode ser usado para matrizes de tamanho variável (seção 6.1.3), que anteriormente não tinham uma sintaxe de inicialização. Em inicializadores, frequentemente temos que especificar valores que tem um significado particular para o programa.
 
 ## 5.6 Constantes nomeadas
+
+Um problema comum, mesmo em programas pequenos, é que eles usam valores especiais para alguns propósitos que são textualmente repetidos por todo o programa. Se, por alguma razão este valor sofre alteração, o programa quebra. Considere um cenário artificial onde temos matrizes de strings (este tipo usa um pointer do tipo char const * const, que veremos mais tarde), nas quais gostaríamos de realizar algumas operações:
+
+```
+char const*const bird[3] = {
+     "raven",
+     "magpie",
+     "jay",
+};
+char const*const pronoun[3] = {
+     "we",
+     "you",
+     "they",
+};
+char const*const ordinal[3] = {
+     "first",
+     "second",
+     "third",
+};
+...
+for (unsigned i = 0; i < 3; ++i)
+     printf("Corvid %u is the %s\n", i, bird[i]);
+...
+for (unsigned i = 0; i < 3; ++i)
+     printf("%s plural pronoum is %s\n, ordinal[i], pronoun[i]);
+```
+
+Aqui usamos a constante 3 em vários locais com três "significados" diferentes que não tem muita relação. Por exemplo, uma adição ao grupo de corvids precisaria de duas alterações separadas do código. Em um cenário real, poderiam haver muito mais lugares no código que dependeriam deste valor em particular, e em um base de código grande, isto pode ser muito tedioso de se manter. *Todas as constantes com um significado particular devem ser nomeadas*. *Todas as constantes com sisgnificados diferentes devem ser distinguidas*.
+
+No início, C tinha surpreendentemente poucas maneiras de especificar constantes nomeadas, e sua terminologia até causava muita confusão sobre quais construtos levavam, efetivamente, a constantes na hora da compilação. Portanto, primeiros precisamos estabelecer a terminologia (seção 5.6.1) antes de olhar nas constantes nomeadas apropriadamente que C forneceu até C23: constantes de enumeração (seção 5.6.2). A última nos ajudará a substituir as diferentes versões de 3 no nosso exemplo com algo mais explicativo. Um segundo mecanismo, genérico, complementa este recurso com substituição de texto simples: macros (subseção 5.6.3). Macros só levam a constantes da hora da compilação se suas substituições forem compostas de literais de tipos básicos, como vimos. Por fim, distinguimos um conceito de objetos temporários sem-nome chamado de literais compostos (seção 5.6.4) e C23 novos objetos consexpt que também servem como constantes nomeadas ou não (seção 5.6.5).
+
+5.6.1 Objetos somente-leitura
+
+Não confunda o termo *constante*, que tem um significado muito específico em C, com objetos que não podem ser modificados. Por exemplo, no código anterior, bird, pronoun e ordinal não são constantes de acordo com nossa terminologia; são objetos 'const-qualified'. Este *qualificador* especifica que não temos o direito de alterar este objeto. Para bird, nem as entradas da metriz nem as próprias strings podem ser alteradas, e seu compilador deveria dar um diagnóstico se tentar fazê-lo: *Um objeto do tipo const-qualified é somente-leitura*.
+
+Isto não significa que o compilador ou o sistema de execução não possam, talvez, alterar o valor de tais objetos: outras partes do programa podem ver aquele objeto sem a qualificação e alterá-lo. O fato que você não pode escrever o sumário de sua conta bancária diretamente (mas apenas lê-lo) não significa que permanecerá constante no tempo.
+
+Existe outra família de objetos somente-leitura que, infelizmente, não são protegidos da modificação de seu tipo: literais de string. *Literais de string são somente leitura*.
+
+Se introduzidos hoje, o tipo de literais de string certamente seria char const[], uma matriz de caracteres const-qualified. Infelizmente, a palavra-chave const foi introduzida em C muito mais tarde que literais de string, e, portanto, permaneceu como é para compatibilidade retroativa.
+
+Matrizes como bird também usam outra técnica para lidar com literais de string. Elas usam um tipo *pointer*, char const*const, para referir-se a um literal de string. Isto é, os próprios literais de string não são armazenados na matriz bird, mas em algum outro lugar, e bird apenas referencia esses lugares. Veremos mais tarde, nas seções 6.2 e 6.11, como este mecanismo funciona.
+
+Desde C23, existe outro construto indicado pela palavra chave constexpr, que resulta em objetos somente-leitura. Mas, em contraste com objetos que são simplesmente const-qualified, eles garantem que nunca serão alterados, e seu valor é conhecido na hora da compilação. A diferença pode ser vista no seguinte exemplo:
+
+```
+extern double const factor;
+constexpr double pi = 3.141'592'653'589'793'238'46;
+```
+
+A declaração de factor apenas nos diz (e ao compilador) que, em algum lugar, existe um objeto double que não temos o direito de alterar. Quando e onde este valor é determinado não é especificado. Por outro lado, o valor de pi é dado junto com a declaração e permanecerá estável por toda a compilação do programa. Veremos constexpr em mais detalhe mais tarde.
+
+5.6.2 Enumerações
+
+C tem um mecanismo simples de nomear pequenos inteiros como precisamos de deles no exemplo, chamado enumerações (enumerations):
+```
+enum corvid { magpie, raven, jay, corvid_num, };
+char const*const bird[corvid_num] = {
+     [raven] = "raven",
+     [magpie] = "magpie",
+     [jay] = "jay",
+};
+...
+for (unsigned i=0; i < corvid_num; ++i>)
+     printf("Corvid %u is the %s\n", i, bird[i]);
+```
+
+Isto declara um novo tipo inteiro enum corvid para o qual sabemos quatro valores diferentes. Como pode ter adivinhado, valores posicionais iniciam do 0 e vão para a frente, entao em nosso exemplo temos ravem com valor 0, magpie com 1, jay com 2 e corvid_num com 3. *Enumerações tem ou valor ou explícito ou posicional.*
+
+Note que isto usa uma ordem diferente para as entradas da matriz que antes, o que é uma das vantagens da abordagem com enumerações: não temos que, manualmente, rastrear a ordem usada na matriz. O ordenamento que é fixo no tipo enumeração faz isso automaticamente.
+
+Agora, se quisermos acrescentar outro corvid, colocamos-o na lista, em qualquer lugar antes de corvid_num.
+
+Como para a maioria dos outros tipos estritos, não existe muito interesse em declarar variáveis de um tipo enumeração como dado aqui; para indexação e aritmética, eles seriam convertidos para signed ou unsigned de qualquer forma. Mesmo as constantes de enumeração em si não são, necessariamente, do tipo enumeração. *Se todas as constantes de enumeração de um tipo enumeração simples cabem em signed int, elas terão esse tipo*.
+
+Assim, para valores pequenos, o interesse está, na verdade, nas constantes, não no tipo recentemente criado. Podemos, portanto, nomear qualquer signed int constante que precisarmos, sem mesmo fornecer uma tag para o nome do tipo:
+```
+enum { p0 = 1, p1 = 2*p0, p2 = 2*p1, p3 = 2*p2, };
+```
+
+Para definir essas constantes, podemos usar expressões inteiras constantes (Integer Constant Expressions, ICE). Tal ICE fornece um valor inteiro na hora da compilação e é muito restrito. Não apenas seu valor deve ser determinável na hora da compilação (chamadas a funções não são permitidas), mas também nenhuma avaliação de um objeto deve participar como um operando para o valor:
+
+```
+signed const        o42 = 42;
+constexpr signed    c42 = 42;
+enum {
+     b42 = 42,           // OK: 42 é um literal.
+     c52 = o52 + 10,     // Erro: o42 é um objeto.
+     b52 = b42 + 10,     // OK: b42 não é um objeto.
+     d52 = c42 + 10,     // OK: C42 é uma constante nomeada.
+};
+```
+
+Aqui, o42 é um objeto, apesar de ser const-qualified, então a expressão para c52 não é uma expressão inteira constante. Com c42, podemos ver que constexpr pode ser usado livremente neste contexto. *Uma expressão inteira constante pode apenas avaliar objetos que são declarados com constexpr*.
+
+Então, principalmente, um ICE pode consistir de quaisquer operações com literais inteiros, constantes de enumeração, objetos constexpr, e subexpressões alignof(desde C23, antes _Alignof) e offsetof, e, eventualmente, algumas subexpressões sizeof.
+
+Antes de C23, mesmo que o valor fosse um ICE, para poder utilizá-lo para definir uma constante de enumeração, tínhamos que garantir que o valor coubesse em um signed int. Isto mudou com C23. *Se constantes de enumeração não cabem em signed int, se possível, o tipo enumeração é ajustado de modo que possa armazenar todas as constantes de enumeração.* *Se as constantes de enumeração não cabem em signed int, as constantes tem o tipo enumeração*.
+
+Perceba que pode, de fato, ocorrer que não haja um tipo que consiga armazenar todos os valores para as constantes:
+
+```
+enum tooLarge { minimus = LLONG_MIN, maximus = ULLONG_MAX, };
+```
+
+A menos que o compilador encontre um tipo inteiro extendido que seja maior que signed long long, esta linha, provavelmente, não compilará. O fato que tipos enumeração são ajustados pode ser convenienete quando não estamos interessados no tipo:
+```
+enum wide {minal = LONG_MIN, maximal = LONG_MAX, };
+typedef enum wide wide;
+```
+
+Aqui, depende da plataforma se long é maior que signed, de modo que o tipo subjacente (underlying) de wide pode ser qualquer um deles, dependendo das circusntâncias. C23 também trouxe nova sintaxe para forçar o tipo subjacente a ser um específico:
+
+```
+enum wider : long { minimer = LONG_MIN, maximer = LONG_MAX, };
+typedef enum wider wider;
+```
+
+Dois pontos seguidos por um tipo inteiro indica o tipo subjacente e força que as constantes de enumeração tenham o tipo de enumeração, mesmo se os valores coubessem em signed:
+
+```
+enum narrow : unsigned char { zero, one, };
+typedef enum narrow narrow;
+```
+
+A propriedade que um tipo enumeração é ajustado de modo que caibam todas as suas constantes poderia ter efeitos surpreendentes para usuários do tipo e deveriam, provavelmente, não ser abusadas. Então, é preferível especificar o tipo inteiro explicitamente, sempre que possível. *Se as constantes de enumeração potencialmente não caibam todas em signed int, especifique o tipo inteiro de um tipo enumeração*.
+
+Isto é bem importante se o tipo subjacente poderia ser com ou sem sinal, como no seguinte:
+
+```
+enum large { down = 0, up = 0xFFFF'FFFF, };  // Ambíguo, não use
+typedef enum large large;
+```
+
+Aqui, dependendo do tamanho de signed int, a constante 0xFFFF'FFFF poderia ter qualquer um dos tipos signed, unsigned, signed long, unsigned long, signed long long ou unsigned long long, e, assim, o tipo inteiro subjacente poderia ser qualquer um deles. Para um leitor ocasional, seria melhor declarar claramente a intenção:
+
+```
+enum eInt : signed int { dInt = 0, uInt = 0xFFFF'FFFF, };
+typedef enum eInt eInt;
+enum eSig : typeof(4'294'967'295) {dSig = 0, uSig = 4'294'967'295, };
+typedef enum eSig eSig;
+enum e32 : uint32_t {d32 = 0, u32 = 0xFFFF'FFFF, };
+typedef enum e32 e32;
+```
+
+A primeira definição para eInt só compilaria se signed int the um tamanho maior que 32. O segundo eSig usa o recurso typeof (que será apresentado com mais detalhe no capítulo 18) para declarar, explicitamente, que queremos que o tipo seja de uma das constantes decimais. Este tipo sempre será com sinal. O terceiro para e32 usa a definição de tipo uint32_t para indicar que o tipo desejado é um tipo sem sinal com tamanho de, pelo menos, 32.
+
+5.6.3 Macros
+
+Antes de C23, não havia outro mecanismo para declarar constantes no senso restrito da linguagem C de outros tipos além do signed int. Em vez disso, C propões outro mecanismo poderoso que introduz substituição textual do código do programa: **macros**. Uma macro é introduzida por um preprocessador `#define`:
+
+```
+# define M_PI 3.14159265358979323846
+```
+
+Esta definição de macro tem o efeito que o identificador M_PI é substituído no programa na sequência pela constante double. Tal definição de macro consiste em 5 partes diferentes:
+
+(1) Um caractere # inicial que deve ser o primeiro caractere não-vazio na linha
+(2) A palavra chave `define`
+(3) Um identificador a ser declarado, nesse caso M_PI
+(4) O texto de substituição, neste caso 3.14159265358979323846
+(5) Um caractere de término para nova linha.
+
+Com este truque, podemos declarar substituição textual para constantes de unsigned, size_t e double. Na verdade, o limite imposto por implementação de size_t, SIZE_MAX, é definido, assim como muitos dos outros recursos do sistema que já vimos: EXIT_SUCCESS, not_eq, complex...
+
+No livro, tais macros padrão de C são geralmente coloridas em vermelho escuro.
+
+A soletração desses exemplos do padrão C não é representativo para convenções que são geralmente usadas na maioria de projetos de software. A maioria deles tem regras bastante rígidas de modo que macros se destaquem visualmente do seu entorno. *Nomes de macros são todos em maiúsculo*. Só desvie dessa regra se possuir fortes motivos.
+
+5.6.4 Literais compostos
+
+Para tipos que não tem literais que descrevam suas constantes, as coisas são ainda mais complicadas. Para macros, temos que usar *literais compostos* no lado da substituição. Tais literais compostos tem a forma:
+
+```
+(T) {INIT}
+```
+
+Isto é, um tipo em parênteses, seguido por um inicializador. Aqui está um exemplo:
+
+```
+# define CORVID_NAME /**/          \
+(char const*const[corvid_num]){    \
+     [chough] = "chough",          \
+     [raven] = "raven",            \
+     [magpie] = "magpie",          \
+     [jay] = "jay",                \
+}
+```
+
+Com isso, poderíamos deixar a matriz bird de fora e reescrever nosso loop for:
+
+```
+for (unsigned i = 0; i < corvid_num; ++i)
+     printf("Corvid %u is the %s\n", i, CORVID_NAME[i]);
+```
+
+Enquanto literais compostos na definição de macros podem nos ajudar a declalrar algo que se comporta de modo similar a uma constante do tipo escolhido, não é uma constante no sentido que discutimos anteriormente. *Um literal composto define um objeto*.
+
+Em geral, esta forma de macro tem algumas armadilhas:
+
+* Literais compostos, como mostrado até aqui, não são apropriados para ICE..
+* Para nossos propósitos aqui, declarar constantes nomeadas, o tipo T deveria se const-qualified. Isto garante que o otimizador em um pouco mais de 'espaço' para gerar bom código binário para tais substituições por macros.
+* *Deve* haver pelo menos um caractere de espaço entre o nome da macro e o parênteses() do literal composto, aqui indicado pelo comentário /**/. De outro modo, isso seria interpretado como o início de uma definição de uma macro tipo-função. Veremos isso muito mais tarde.
+* Um caractere contrabarra no final (very end) da linha pode ser usado para continuar a definição da macro na próxima linha.
+* Não deve haver ponto e vírgula no final da definição da macro. Lembre-se, isso é tudo substituição textual.
+
+*Não esconda um ponto e vírgula de término dentro de uma macro.*
+
+*Indente à direita marcadores de continuação para macros na mesma coluna.*
+
+Como pode-se ver no exemplo, isso ajuda a visualizar a definição inteira da macro mais facilmente.
+
+5.6.5 O construto constexpr
+
+Todas essas técnicas não são muito úteis em contextos nos quais, por exemplo, precisaríamos de constantes nomeadas para tipos complicados que devem ser usados como inicializadores dentro de um arquivo. Aqui, um inicializador tem que ser uma expressão constante. C23 introduziu o construto constexpr, que pode ser aplicado para declarações e também para literais compostos. Uma declaração equivalente a nossa macro introduzia anteriormente M_PI é o seguinte:
+
+```
+constexpr double pi = 3.14159265358979323846;
+```
+
+Usando constexpr tem a vantagem de que a constante é checada na hora da compilação onde foi declarada: uma conversão que leva a uma alteração de seu valor é um erro. Por exemplo,
+
+```
+constexpr unsigned 𝜋flat = 3.141’592’653’589’793’238’46; // error
+```
+
+resulta em um erro de compilador pois dígitos significativos após o ponto decimal na direita são perdidos ao converter para o tipo unsigned na esquerda.
+
+constexpr também pode ser usado para literais compostos:
+
+```
+# define CORVID_NAMES /**/         \
+(constexpr char[8][corvid_num]){   \
+[chough] = "chough",               \
+[raven] = "raven",                 \
+[magpie] = "magpie",               \
+[jay] = "jay",                     \
+}
+```
+
+Observe que mudamos para uma matriz de corvid_num matrizes de 8 caracteres cada. Cada um dessas matrizes de 8 caracteres é inicializada com valores indicados e então preenchida com zeros ao final.
+
+Para todos esses caracteres, ao usar constexpr, o compilador sabe que não deve alterá-los durante execução, e a qualificaçao const é implicada. Este conhecimento poderia ser usado para tornar nosso programa mais eficiente, seja mais rápido (em algum sentido) ou por usar menos memória. Se a matriz, escondida por trás da macro, é indexada diretamente (como em CORVID_NAMES[raven]), a matriz inteira não é necessária. Apenas o literal string correspondente (nesse caso, "raven"), poderia ser usado diretamente pelo compilador. Ainda mais, o compilador teria permissão de usar o mesmo literal string "raven" para todas as ocorrências com índice raven, o mesmo para todos com magpie etc.
+
+## 5.7 Representação em bináriow
