@@ -270,3 +270,39 @@ As últimas duas comparações são ainda mais problemáticas. Em plataformas on
 
 *Evite operações com operandos de diferente sinal (signedness/ tipo signed e unsigned)*. *Use tipos sem sinal sempre que possível*. *Escolha seus tipos aritméticos de modo que conversões implícitas são inofensivas*.
 
+## 5.5 Inicializadores
+
+Já vimos (na seção 2.3) que o inicializador é uma parte importante na definição de um objeto. Inicializadores ajudam-nos a garantir que a execução de um programa sempre esteja em um estado definido de modo que sempre que acessamos um objeto, tenha um valor bem-conhecido que determina o estado da máquina abstrata. *Todas as variáveis deveriam ser inicializadas*.
+
+A única exceção a esta regra deve ser feita para código que deve ser altamente otimizado. Para a maioria do código que fomos capazes de escrever até aqui, um compilador moderno será capaz de traçar a origem de um valor a sua última atribuição ou inicialização. Inicializações ou atribuições supérfluas serão simplesmente retiradas durante otimização.
+
+Para tipos escalares como inteiros e pontos flutuantes, um inicializador apenas contém uma expressão que pode ser convertida para aquele tipo. Vimos muitos exemplo disto. Opcionalmente, expressões de inicialização podem estar cercadas por {}. Alguns exemplos:
+
+```
+double a = 7.8;
+double b = 2 * a;
+double c = { 7.8 };
+double d = { 0 };
+```
+
+Iijcializadores ára outros tipos **devem** ter as chaves {}. Por exemplo, inicializadores de matrizes contém inicializadores para os diferentes elementos, cada qual seguido de uma vírgula:
+
+```
+double A[] = { 7.8, };
+double B[3] = { 2 * A[0], 7, 33, };
+double C[] = { [0] = 6, [3] = 1,};
+```
+
+(A[0] = double 7.8)//(B[0] = double 15.6; B[1] = double 7.0; B[2] = double 33.0)//(C[0] = double 6.0; C[1] = double 0.0; C[2] = double 0.0; C[3] = double 1.0)
+
+Como vimos, se não existe a especificação do tamanho, a matriz é dita como tendo um tipo incompleto. O tipo é, então, completo pelo inicializador para especificar completamente o tamanho. Aqui, A tem apenas um elemento, enquanto C tem 4. Para os dois primeiros inicializadores, o elemento ao qual a inicialização escalar aplica-se é deduzido da posição do escalar na lista: por exemplo, B[1] é inicializado com o valor 7. A forma de C é chamada inicializadores designados. Eles são, de longe, preferíveis pois tornam o código mais robusto contra pequenas alterações nas declarações. *Use inicializadores designados para todos os tipos de dados agregados*.
+
+Se não souber como inicializar um variável do tipo T, o inicializador padrão sempre funcionará:
+
+```
+T a = { };
+```
+
+Este recurso foi introduzido apenas em C23; antes disso, tínha-se que usar { 0 }, e havia um raciocínio relativamente complicado que fazia isso funcionar. Este inicializador padrão também pode ser usado para matrizes de tamanho variável (seção 6.1.3), que anteriormente não tinham uma sintaxe de inicialização. Em inicializadores, frequentemente temos que especificar valores que tem um significado particular para o programa.
+
+## 5.6 Constantes nomeadas
