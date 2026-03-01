@@ -550,4 +550,256 @@ Observe que mudamos para uma matriz de corvid_num matrizes de 8 caracteres cada.
 
 Para todos esses caracteres, ao usar constexpr, o compilador sabe que não deve alterá-los durante execução, e a qualificaçao const é implicada. Este conhecimento poderia ser usado para tornar nosso programa mais eficiente, seja mais rápido (em algum sentido) ou por usar menos memória. Se a matriz, escondida por trás da macro, é indexada diretamente (como em CORVID_NAMES[raven]), a matriz inteira não é necessária. Apenas o literal string correspondente (nesse caso, "raven"), poderia ser usado diretamente pelo compilador. Ainda mais, o compilador teria permissão de usar o mesmo literal string "raven" para todas as ocorrências com índice raven, o mesmo para todos com magpie etc.
 
-## 5.7 Representação em bináriow
+## 5.7 Representação em binário
+
+A representação binária de um tipo é um modelo que descreve os valores possíveis para aquele tipo. Não é o mesmo que a representação de objeto na memória que descreve, mais ou menos, o armazenamento físico de valores de um determinado tipo. *O mesmo valor pode ter diferentes representações binárias*.
+
+5.7.1 Unsigned integers
+
+Já vimos que os tipos inteiros sem sinal são aqueles tipos aritméticos para os quais as operações aritméticas padrão tem uma descrição matemática fechada. Em termos matemáticos, eles implementam um *anel*, Z_n, o conjunto de inteiros módulo algum número N. Os valores que são representáveis são 0, ..., N-1. O valor máximo N-1 determina completamente tais tipos inteiros sem sinall e são disponíveis através de uma macro cujo nome termina com _MAX. Para os tipos inteiros sem sinal básicos, eles são UINT_MAX, ULONG_MAX e ULLONG_MAX, e são fornecidos através de <limits.h>. Como vimos, o de size_t é SIZE_MAX da biblioteca <stdint.h>.
+
+A representação binária de valores inteiros não-negativos é sempre exatamente o que o termo indica: tais números são representados por dígitos binários b_0, b_1, ..., b_p-1, chamados **bits**.Cada um dos bits tem valor 0 ou 1. O valor de tal número é computado como 
+
+![Equação 1. Computação de números binários](imagens/bin_comp.png).
+
+O valor p na representação binária é chamado de precisão do tipo subjacente que, para tipos sem sinal, é o mesmo que a largura. Para todos os tipos sem sinal, esses valores podem ser determinados da macro correspondente, como UINT_WIDTH, ULONG_WIDTH e ULLONG_WIDTH. O bit b_0 é chamado de bit menos significativo, LSB(less-significant bit) e o bit b_p-1 é chamado de bit mais significativo, MSB(most-significant bit).
+
+Dos bits b_i que são 1, aquele com o índice mínimo i é chamado de bit menos significativo definido (?, least-significant bit set), e o com o maior índice é chamado de bit mais significativo definido (?, most-significant bit set). Por exemplo, para um tipo sem sinal com p = 16, o valor 240 teria b_4 = 1, b_5 = 1, b_6 = 1 e b_7 = 1. Todos os outros bits são 0, o bit menos significativo definido é b_4 e o mais significativo é b_7. Vemos, da equação 1, que 2^p é o primeiro valor que não pode ser representado com o tipo. Assim, N = 2^p e a seguinte observação é verdadeira: *O valor máximo de qualquer tipo inteiro é da forma 2^p -1*.
+
+Observe que, para esta discussão da representação de valores não-negativos, não argumentamos sobre a propriedade de sinal (signedness) do tipo. Estas regras são aplicadas igualmente para tipos com e sem sinal. O que foi dito até aqui é suficiente para descrever tais tipos sem sinal. *Aritmética em um tipo inteiro sem sinal é determinada por sua precisão*.
+
+Por fim, a tabela 5.5 mostra os limites de alguns escalares comumente usados por todo o livro.
+
+![Tabela 5.5. Limites de escalares](imagens/limites_escalares.png)
+
+5.7.2 Conjuntos de bits e operações bit-a-bit
+
+Esta representação binária simples de tipos sem sinal permite-nos usá-los para outro propósito que não está diretamente ligado à aritmética: como conjuntos de bits. Um conjunto de bits é uma interpretação diferentes de um valor sem sinal, onde assumimos que ele representa um subconjunto do conjunto base V = {0, ..., p-1} e onde pegamos o elemento i como membro do conjunto, se o bit b_i está presente.
+
+Existem três operadores binários que operam em conjuntos de bits: |, & e ^. Eles representam a união de conjuntos A U B, interseção de conjuntos A ∩ B e a diferençpa simétrica A Δ B, respectivamente. Por exemplo, escolhemos A = 240, representando {4, 5, 6, 7} e B = 287, o conjunto de bits {0, 1, 2, 3, 4, 8}; veja a tabela 5.6. Para o resultado dessas operações, o tamanho total do conjunto base, e, portanto, a precisão p, não é necessária. Assim como para operações aritméticas, existem operadores de atribuição correspondentes &=, |= e ^=, respectivamente.
+
+![Tabela 5.6 Efeitos de operadores bit-a-bit](imagens/efeitos_op_bit_bit.png)
+
+Existe, ainda, um outro operador que opera nos bits do valor: o operador complemento ~. O complemento ~A teria valor 65295 e corresponderia ao conjunto {0,1,2,3,8,9,10,11,12,13,14,15}. Este complemento de bits sempre dependerá da precisão p do tipo.
+
+Todos esses operadores podem ser escritos com identificadores: bitor, bitand, xor, or_eq, and_eq, xor_eq e compl se você incluir o cabeçalho <iso646.h>. Uma utilização típica de conjuntos de bits é para flags, variáveis que controlam certas configurações de um programa:
+
+```
+enum corvid { magpie, raven, jay, chough, corvid_num, };
+#define FLOCK_MAGPIE     1U
+#define FLOCK_RAVEN      2U
+#define FLOCK_JAY        4U
+#define FLOCK_CHOUGH     8U
+#define FLOCK_EMPTY      0U
+#define FLOCK_FULL       15U
+
+int main(void) {
+     unsigned flock = FLOCK_EMPTY;
+     ...
+     if (something) flock |= FLOCK_JAY;
+     ...
+     if (flock&FLOCK_CHOUGH)
+          do_something_chough_specific(flock);
+
+}
+```
+
+Aqui, as constantes de cada tipo de corvid são uma potência de dois, de modo que elas tem exatamente um conjunto de bits em sua representaçao binária. Afiliação em um flock pode, então, ser lidada através dos operadores: |= acrescenta um corvid ao flock, e & com um uma das constantes testa se um corvid em particular está presente.
+
+Observe que a similaridade entre operadores & e && ou | e ||. Se vemos cada um dos bits b_i de um unsigned como um valor verdade, & realiza o *e lógico* (logical and) de todos os bits de seus argumentos simultaneamente. Esta é uma boa analogia que deveria ajudá-lo a memorizar a escrita particular destes operadores. Por outro lado, lembre-se que os operadores || e && tem acaliação de curto-circuito, então tenha certeza de diferenciá-los claramente dos operadores de bits.
+
+Desde C23, outro conjunto de operações de bits é fornecido através do cabeçalho <stdlib.h>. Eles incluem a funcionalidade de contar os bits com valor 1 (o tamanho de um conjunto) com `stdc_count_ones`, de detectar se existe exatamente um bit com valor 1 (se um conjunto é um singleton) com `stdc_has_single_bit`, para fornecer o bit com o maior número que armazena o valor 1 com `stcd_bit_floor` ou retornar o conjunto singleton com o maior elemento numerado `stdc_bit_floor`. Como este cabeçalho é novo com o C23, sua plataforma pode não tê-lo ainda. Outro recurso novo é o teste de preprocessador __has_include, que você pode usar para questionar se um arquivo de cabeçalho pode ser encontrado ou não:
+
+```
+#if !__has_include(<stdlib.h>)
+#  error "this file needs the <stdlib.h> header"
+#endif
+```
+
+5.7.3 Operadores deslocamento
+
+O próximo conjunto de operadores conecta a interprestação de valores sem sinal como números e como conjuntos de bits. Um operação de deslocamento para a esquerda << corresponde com a multiplicação do valor numérico pela potência de dois correspondente. Por exemplo, para A = 240, o conjunto {4, 5, 6, 7}, A << 2 é 240 * 4 = 960, que representa o conjunto {6, 7, 8, 9}. Os bits resultantes que não couberem na representação binária para o tipo são simplesmente omitidos. Em nosso exemplo, A << 9 corresponderia ao conjunto {13, 14, 15, 16} (e valor 122880), mas como não existe bit 16, o conjunto resultante é {13, 14, 15}, valor 57344.
+
+Assim, para tal operação de deslocamento, a precisão p é importante. Não apenas bits que não cabem são removidos, mas p também restringe os valores possíveis do operando à direita. *O segundo operando de uma operação de deslocamento deve ser menor que a precisão*.
+
+Existe uma operação de deslocamento à direita análoga >> que desloca a representação binária em direção a algarismos menos significativos. Isto corresponde a uma divisão inteira por uma potência de 2. Bits em posições menores ou iguais ao valor do deslocamento são omitidos do resultado. Observe que, para essa operação, a precisão do tipo não é importante. Também existem operadores de atribuição correspondentes <<= e >>=.
+
+A utilização primária do operador de deslocamento à esquerda é especificar potências de 2. Em nosso exemplo, agora podemos substituir o #define:
+
+```
+#define FLOCK_MAGPIE     (1U << magpie)
+#define FLOC_RAVEN       (1U << raven)
+#define FLOC_JAY         (1U << jay)
+#define FLOC_CHOUGH      (1U << chough)
+#define FLOC_EMPTY       0U
+#define FLOC_FULL        ((1U << corvid_num)-1)
+```
+
+Isto torna o exemplo mais robusto contra alterações na enumeração.
+
+5.7.4 Valores booleanos
+
+O tipo de dado Boolean em C também é considerado um tipo sem sinal. Ele possui apenas os valores false e true, 0 e 1, então não há valores negativos. Antes de C23, os nomes bool assim como as constantes false e true eram possíveis apenas com a inclusão de <stdbool.h>. Se você tem que manter um base de código antiga ou precisar garantir compatibilidade retroativa para sistemas mais velhos, deveria ainda usar essa inclusão. Em sistemas que não precisam disso, isso não deveria causar nenhum problema. (Ateriormente, o tipo básico era chamado _Bool)
+
+Atribuição a uma variável desse tipo não segue a regra de módulo, mas uma regra especial para valores booleanos. Você raramente precisará de valores bool, sendo apenas úteis se houver necessidade de reduzir valores para false ou true na atribuição. Versões iniciais de C não possuíam um mtipo Booleano, e muitos programadores experientes em C ainda não os usam.
+
+5.7.5 Inteiros com sinal
+
+Uma implementação de C precisa decidir sobre dois pontos:
+
+* O que ocorre no transbordamento aritmético?
+* Como o sinal de um tipo é representado?
+
+Tipos com e sem sinal vêm em pares de acordo com seu rank de inteiros, com as duas exceções notáveis da tabela 5.1 sendo char e bool. A representação binária do tipo com sinal é restringida pelo diagrama de inclusão que vimos anteriormente. *Valores positivos são representados independentemente da propriedade do sinal*.
+
+Em outras palavras, um valor positivo com um tipo com sinal tem a mesma representação que no tipo correspondente sem sinal. Por isso o valor máximo para qualquer tipo inteiro pode ser expresso tão facilmente: tipos com sinal também tem uma precisão p que determina o valor máximo do tipo.
+
+A próxima coisa prescrita pelo padrão é que tipos com sinal tem um bit adicional, o bit de sinal. Se for 0, temos um valor positivo. Se é 1, o valor é negativo.Historicamente, houveram diferentes ideias de como tal bit de sinal poderia ser usado para obter um número negativo, mas C23 esclareceu que, hoje em dia, somente o complemento de dois é permitido para representações de sinal.
+
+Anteriormente, também houveram sinal e magnitude e complemento de um, mas atualmente eles tem apenas relevância histórica ou exótica: para sinal e magnitude, a magnitude é sempre tomada como valores positivos, e o bit de sinal simplesmente especifica se há ou não um sinal negativo. O complemento de um pega o valor positivo correspondente e complementa todos os bits. Ambas representações tem a desvantagem de que dois valores são avaliados para 0: existe um 0 positivo e negativo. Como não há plataforma ativa que tenha essas representações, elas foram removidas do padrão de C; você deveria somente encontrá-las em livros de história ou em testes de contratação mal-intencionados.
+
+A representação do complemento de dois realiza exatamente a mesma aritmética que vimos para tipos sem sinal, mas a metade superios dos valores sem sinal (aqueles com bit de maior ordem de 1) são interpretados como negativos. As seguintes funções são basicamente tudo que precisa-se para interpretar valores sem sinal como valores com sinal:
+
+```
+bool is_negative(unsigned a) {
+     constexpr unsigned int_max = UINT_MAX/2;
+     return a > int_max;
+}
+
+bool is_signed_less(unsigned a, unsigned b) {
+     if (is_negative(a) != is_negative(b)) return a > b;
+     else return a < b;
+}
+```
+
+A Tabela 5.7 mostra um exemplo de como o valor negativo de 240 pode ser construído. Para tipos sem sinal, -A pode ser computado como ~A + 1. A representação de complemento de dois realiza a mesma operação de bit para tipos com sinal que para tipos sem sinal. Ela apenas interpreta representações que tem o bit de alta ordem como sendo negativo. 
+
+![Tabela 5.7 Negação de tipos inteiros sem sinal de 16-bits.](imagens/tabela_5_7.png)
+
+Quando feito dessa forma, aritmética de inteiros com sinal se comportará, mais ou menos, bem. Infelizmente, existe uma armadilha que torna o resultado da aritmética com sinal difícil de prever: transbordamento (overflow). Onde valores com sinal são forçados a 'enrolar' (wrap) em torno do máximo, o comportamento de transbordamento de um número com sinal é indefinido. Os dois loops seguintes parecem bem similares:
+
+```
+for (unsigned i = 1; i; ++i) do_something();
+for (  signed i = 1; i; ++i) do_something();
+```
+
+Sabemos o que ocorre no primeiro loop: o contador é somado até UINT_MAX e então circula de volta para 0. Tudo isso leva algum tempo, mas após UINT_MAX - 1 interações, o loop termina pois i chegou em 0.
+
+Para o segundo loop, tudo parece similar. Mas como o comportamento de transbordamento é indefinido, é permitido ao compilador *fingir* que nunca ocorerá. Como também sabe-se que o valor no início é positivo, pode-se assumir que i, desde que o programa tenha comportamento  definido, nunca será negativo ou 0. A regra as-if permite que o compilador otimize o segundo loop para:
+
+```
+while (true) do_something();
+```
+
+Ou seja, um loop infinito. A única possibilidade que o código seja válido é que do_something tenha um efeito colateral de modo que a execução do programa progrida. Também pode-se assumir que o ponto após o loop nunca será alcançado, ou pelo loop continuando execução indefinidamente ou por chegar a um estado interno que finaliza a execução. Na seção 15.4, discutiremos tais situações em mais detalhe. *Assim que a máquina de estados abstratos atinge um estado indefinido, não se pode fazer nehuma presunção sobre a continuação da execução do código.*
+
+Não apenas isso, o compilador tem permissão de fazer o que quiser para a própria operação ("Indefinido? Então vamos definir isso"), mas também pode assumir que nunca atingirá tal estado e tirar conclusões disto. Normalmente, refere-se a um programa que atingiu um estado indefinido como "tendo" ou "mostrando" *comportamento indefinido*. Esta forma de dizer é um pouco ruim; em muitos desses casos, um programa não "mostra" quaisquer sinais visíveis de estranheza. Pelo contrário, coisas ruins continuarão sem que você perceba por um longo tempo. *É sua responsabilidade evitar comportamentos indefinidoso de todas as operações*.
+
+O que é pior, em algumas plataformas com algumas opções de compilador padrão, a execução parecerá correta. Como o comportamento é indefinido, em tais plataformas, aritméticas de inteiros com sinal poderiam coincidir de ser basicamente o mesmo que sem sinal. Mas trocar de plataforma, de compilador ou algumas opções pode alterar isso, fazendo com que o programa que parecia funcionar há muito tempo quebre.
+
+Na sequência, evitará-se falar de comportamento indefinido e geralmente será referido como *falha de programa* pois isso é o que importa. Tais falhas são, em geral, não confiáveis (muitas vezes chamadas *byzantine*); isto é, nenhum dos componentes da execução são mais confiáveis. O alcance possível de efeitos inclui ele permanecer despercebido até causar problema real a sua plataforma ou dados. Um capítulo inteiro do livro é dedicado a falhas de programa (capítulo 15). *Se o estado do programa chega em uma operação com comportamento indefinido, a execução falhou.*
+
+Uma das coisas que poderia já transbordar para tipos inteiros é a negação. Vimos que INT_MAX tem todos os bits exceto o de sinal definidos como 1. INT_MIN, então, tem a 'próxima' representação: o bit de sinal como 1 e o resto como 0. O valor correspondente não é -INT_MAX. *INT_MIN < -INT_MAX*.
+
+Ou seja, o valor positivo -INT_MIN é fora do alcance como o valor da operação é maior que INT_MAX. *Negação pode transbordar para aritmética com sinal*.
+
+Para tipos com sinal, operações de bits trabalham com a representação binária. As operações de deslocamento acabam se tornando bagunçadas. A semântica do que tal operação é para um valor negativo não é clara. *Use tipos sem sinal para operações em bits*.
+
+5.7.6 Tipos inteiros de largura fixa
+
+A largura (e, portanto, a precisão) de tipos inteiros que vimos até aqui pode ser inspecionada usando macros de <limits.h>, tais como UINT_WIDTH e LONG_WIDTH. O padrão C apenas garante uma largura mínima a eles. Para os tipos sem sinal, elas são:
+
+![Largura de diferentes tipos](imagens/type_width_macros.png)
+
+Em circunstâncias comuns, estas garantias deveriam dar-lhe informação suficiente; mas com algumas restrições técnicas, tais garantias poderiam não ser suficientes, ou você poderia querer enfatizar alguma precisão em particular. 
+
+O padrão C dá nomes para tipos inteiros de largura exata em <stdint.h>. Como o nome indica, eles são de uma largura prescrita exata, que, para os tipos sem sinal fornecidos, garante-se que seja igual sua precisão. *Se o tipo `uint`N`_t` é fornecido, é um tipo inteiro sem sinal com exatamente N bits de largura e precisão*.
+
+*Se o tipo `int`N`_t` é fornecido, possiu sinal e tem umam çargura de exatamente N bits e uma precisão de N - 1.*
+
+*Se os tipos com as propriedades requiridas existem para um valor N, `int`N`_t` e `uint`N`_t` devem ser fornecidos.*
+
+Atualmente, as plataformas costumam fornecer os tipos sem sinal uint8_t, uint16_t, uint32_t e uint64_t e tipos com sinal int8_t, int16_t, int32_t e int64_t, com mais tipos sendo acrescentado, como uint128_t e int128_t. Sua presença e limites podem ser testados com as macros UINT8_WIDTH, ..., UINT128_WIDTH e INT8_WIDTH, ..., INT128_WIDTH. 
+
+Para codificar literais do tipo requisitado, existem as macros UINT8_C, ..., UINT64_C e INT8_C, ..., INT128_C. por exemplo, em plataformas onde uint64_t é unsigned long, INT64_C(1) geralmente expande para algo como 1UL. *Para quaisquer dos tipos de largura fixos que são fornecidos,as macros largura _WIDTH, mínimo _MIN (apenas com sinal), máximo _MAX e literais _C também são.*
+
+Como não podemos saber o tipo por trás destes tipos de largura-fixa, seria difícil adivinhar o especificador de formato correto para usar para printf e similares. Desde C23, o especificadores de comprimento "wN" podem ser usados para isso, onde N é a largura do tipo:
+
+```
+uint32_t n = 78;
+int64_t big = (-UINT64_C(1)) >> 1;      // Mesmo valor que INT64_MAX
+printf("n is %w32u, and big is %w64d\n", n, big);
+```
+
+A disponibilidade das macros de largura (e alguns outros truques de especificação) desde C23 possibilitam que tipos possam ser fornecidos que não podem nem mesmo ser manipulados completamente pelo preprocessador de macros. Em particular, a maioria dos computadores desktop modernos tem hardware que suportam tipos de 128 bytes, e agora podem ser expostos aos tipos inteiros de C como int128_t e uint128_t. Isto pode ser bem interessante se tiver que manusear conjuntos de bit grandes:
+
+```
+#if ULLONG_WIDTH < UINT128_WIDTH        // não use UINT128_MAX
+typedef uint128_t wideType;
+#else
+typedef unsigned long long wideType;
+#endif
+```
+
+5.7.7 Tipos inteiros de precisão de bits
+
+Os tipos inteiros de largura-exata que vimos apenas existem para um número específico de bits, geralmente apenas para potências de dois. Para quantidades que deveriam caber em um número de bits preciso, C23 introduziu tipos inteiros de precisão de bits. Eles são especificados com a palavra chave _BitInt:
+
+```
+unsigned  _BitInt(3) u3 = 7wbu;         // valores          0, ...., 3, ..., 7
+signed    _BitInt(3) s3 = 3wb;          // valores -4, ..., 0, ..., 3
+          _BitInt(2) s3 = 3wbu;         // valores          0, ..., 3
+```
+
+Aqui vemos que esses tipos também tem literais, em particular literais numéricos que tem sufixos de wb ou WB, possivelmente combinados com u ou U, em seu sufixo. Eles tem a particularidade de ter o tipo com a menar largura que pode representar o valor. Por exemplo:
+
+* 7wbu precisa de 3 bits para representar o valor 7 e é sem sinal, enão o tipo é unsigned _BitInt(3)
+* 3wb precisa de 2 bits para o valor 3 e reserva 1 bit para o sinal, entao tem o tipo signed _BitInt(3).
+* ewbu precisa de 2 bits para o valor mas não precisa de um bit de sinal, então tem tipo signed _BitInt(2).
+
+Estes tipos sempre computam dentro da largura máxima dos operandos. Por exemplo, em
+
+```
+u3 + 1wbu
+```
+
+o primeiro operando tem uma largura 3 e o segundo uma largura 1. Então, o resultado da operação tem o tipo unsigned _BitInt(3), e para nossa escolha de valores, o resultado matemático 8 da adição dobra(wraps around) no valor máximo, resultando em um valor 0.
+
+Uma aplicação possível desses tipos é para constantes específicas que queremos que tenham uma certa largura:
+
+```
+constexpr unsigned _BitInt(3) max3u = -1;              // 0b111
+constexpr unsigned _BitInt(4) max4u = -1;              // 0b1111
+constexpr unsigned _BitInt(4) high4u = max4u - max3u;  // 0b1000
+constexpr   signed _BitInt(4) max4s = max3u;           // 0b0111
+constexpr   signed _BitInt(4) min4s = ~max4s;          // 0b1000
+```
+
+Os tipos existem para todas as larguras de 1 (para tipos sem sinal) ou 2 (para tipos com sinal) até o valor BITINT_MAXWIDTH, definido em <limits.h>; esta largura máxima sempre será maior ou igual à largura de unsigned long long, ULLONG_WIDTH. Isto permite-nos especificar todos os literais inteiros com valor e sinal exatos.
+
+5.7.8 Dados de ponto flutuante
+
+Enquanto inteiros se aproximam de conceitos matemáticos de N (conjunto dos naturais, unsigned) ou Z (conjunto dos inteiros, signed), tipos de ponto flutuante são próximos de R (conjunto dos reais, não complexos) ou C (conjunto dos complexos). O jeito em que eles diferem desses conceitos matemáticos é duplo. Primeiro, existe uma restrição de tamanho no que é apresentável. Isto é similar ao que vimos para tipos inteiros. O arquivo incluído <float.h>, por exemplo, tem constantes DBL_MIN e DBL_MAX que nos fornecem com os valores mínimos e máximos de double. Mas tome cuidado que aqui, DBL_MIN é o menor número que é, estritamente, maior que 0.0; o menor double negativo é -DBL_MAX.
+
+Entretanto, números reais tem outro problema quando queremos representá-los em um sistema físico: eles podem ter uma expansão ilimitada, como o valor de 1/3, que é uma repetição infinita do dígito 3 na representação decimal, ou o valor de pi, que é "transcendente", tendo uma expansão interminável em qualquer representação, não se repetindo de nenhuma maneira.
+
+C e outras linguagens de programação lidam com estas dificuldades truncando (cutting off) a expansão. A posição onde a expansão é cortada é 'flutuante' (por isso seu nome) e depende na magnitude do número em questão. Em uma visão simplificada, um valor de ponto-flutuante é computado dos seguintes valores:
+*s* Sinal (±1)
+*e* Expoente, um inteiro
+*f_1, ..., f_p* valores 0 ou 1, os bits de mantissa
+
+Para o expoente, temos e_min ≤ e ≤ e_max*p, o número de bits na mantissa, é chamado precisão. O valor de ponto flutuante é, então, dado por esta fórmula:
+
+![Fórmula do valor de ponto flutuante](imagens/valor_ponto_flut.png)
+
+Os valores p, e_min e e_max são dependentes do tipo e, portanto, não representados explicitamente em cada número. Eles podem ser obtidos através de macros como DBL_MANT_DIG (para p, tipicamente 53), DBL_MIN_EXP(e_min, -1021) e DBL_MAX_EXP(e_max, 1024). Se temos, por exemplo, um número que tem s = -1 e e = -2, f_1 = 1, f_2 = 0 e d_3 = 1, seu valor é:
+
+![Exemplo de cálculo de um número de ponto flutuante](imagens/exemplo_ponto_flut.png)
+
+que corresponde ao valor decimal -0.156 25. Deste cálculo, também vemos que valores de ponto-flutuante sempre são representáveis como uma fração que tem alguma potência de dois no denominador.
+
+Algo importante para ter-se em mente com essas representações de ponto-flutuante é que valores podem ser truncados durante computações intermediárias. *Operações de ponto flutuante não são nem associativas, comutativas ou distributivas.*
+
+Basicamente, pontos flutuantes perdem todas as propriedades algébricas que estamos acostumados na matemática pura. Os problemas que surgem disto são particularmente notáveis se operarmos com valores que tem ordens de magnitude muito diferentes. Por exemplo, acrescentar um valor de ponto flutuante muito pequeno x com um expoente que é menor que -p a um valor y > 1 retorna apenas y novamente. Como consequência, é bem difícil afirmar sem outras investigações se duas computações deram o "mesmo" resultado. Tais investigações são, muitas vezes, questões de pesquisa de ponta, de modo que não podemos afirmar igualdade ou inegualdade. Somo capazes, somente, de dizer que os resultados são "próximos". *Nunca compare valores de ponto flutuante por igualdades.*
+
+A representação dos tipos complexos é simples e idêntica a uma matriz de dois elementos do tipo real de ponto flutuante correspondente. Para acessar as partes reais e imaginárias de um número complexo, duas macros de tipo genérico também vem com o cabeçalho <tgmath.h>: creal e cimag. Para qualquer z de um dos três tipos complexos, temos que z == creal(z) + cimag(z)*I.
