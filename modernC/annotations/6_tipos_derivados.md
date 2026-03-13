@@ -220,3 +220,52 @@ void* memchr(const void *s, int c, size_t n);
 Ainda falta conhecimento sobre entidades que são especificadas como void*. Eles são *pointers* de objetos e um tipo desconhecido. Apenas no capítulo 11 veremos porque e como esses novos conceitos de pointers e tipo void ocorrem.
 
 ## 6.2 Pointers como tipos opacos
+
+Já vimos o conceito de pointers aparecer em vários lugares, em particular como um argumento void* e tipo de retorno e como char const * const para manipular referências para literais de string. Sua propriedade principal é que eles não contém diretamente a informação de interesse; em vez disso, referenciam, ou *apontam*, para o dado. A sintaxe de C para pointers sempre possui o asterisco *:
+
+```
+char const*const p2string = "some text";
+```
+
+Nesta primeira exploração, apenas temos que conhecer algumas propriedades simples de pointers. A representação binária de um pointer é completamente dependente da plataforma e não nos interessa.
+
+*Pointers são objetos opacos*. Isto significa que apenas seremos capazes de lidar com pointers através de operações que a linguagem C permite para eles. Como dito, a maioria dessas operações serão introduzidas posteriormente, aqui vamos precisar somente de inicialização, atribuição e avaliação.
+
+Uma propriedade particular de pointers que os distingue de outras variáveis é seu estado. *Pointers são válidos, nulos (null) ou inválidos*. Por exemplo, a variável p2string acima é sempre válida pois aponta para o literal de string "some text". Devido à segunda palavra chave const, esta associação jamais poderá ser alterada.
+
+*Inicialização ou atribuição com **nullptr** torna um pointer nulo.* Veja o seguinte exemplo:
+
+```
+char const*const p2nothing = nullptr;
+```
+
+Visualizamos esta situação especial como:
+
+![Null pointer](imagens/nullptr.png)
+
+Note a diferença com uma string vazia:
+
+```
+char const*const p2empty = "";
+```
+
+![Empty string](imagens/emptystring.png)
+
+Geralmente, refere-se a pointers no estado null como *null pointer*.
+
+*Em expressões lógicas, pointers avaliam como **false** se forem null.* Preste atenção que tais testes não distinguem pointers válidos de inválidos. Assim, o estado realmente "mal" de um pointer é inválido, pois é um estado não-observável:
+
+*Pointers inválidos levam e falhas de programa.*
+
+Por exemplo, um pointer inválido pode ser criado como:
+
+```
+char const*const p2invalid;
+```
+
+Por não ser inicializado, seu estado é indeterminado. Qualquer avaliação levaria a um valor inválido e deixaria seu programa em um estado indefinido. Portanto, se não houver garantias que um pointer seja válido, **devemos**, pelo menos, garantir que seja colocado como null. *Sempre inicialize pointers.*
+
+
+
+
+
