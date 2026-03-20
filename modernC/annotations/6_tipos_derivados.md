@@ -265,7 +265,221 @@ char const*const p2invalid;
 
 Por não ser inicializado, seu estado é indeterminado. Qualquer avaliação levaria a um valor inválido e deixaria seu programa em um estado indefinido. Portanto, se não houver garantias que um pointer seja válido, **devemos**, pelo menos, garantir que seja colocado como null. *Sempre inicialize pointers.*
 
+## 6.3 Estruturas
+
+Matrizes combinam vários objetos do mesmo tipo base em um objeto maior. Isto é completamente razoável onde queremos combinar informações para as quais a noção de um primeiro, segundo, ... elemento é aceitável. Se não é, ou se temos de combinar objetos de tipos diferentes, entrão *estruturas*(**STRUCT**ures), através da palavra chave `struct`, são utilizadas.
+
+6.3.1 Estruturas simples para acessar campos por nome
+
+Como um primeiro exemplo, vamos revisitar os corvídeos da seção 5.6.2. Lá, usamos um truque com um tipo enumeração para rastrear nossa interpretação dos elementos individuais de um nome de matriz. Estruturas de C permitem uma abordagem mais sistemática ao dar nomes a *membros*(ou *campos*) em um agregado:
+
+```
+struct birdStruct {
+    char const* jay;
+    char const* magpie;
+    char const* raven;
+    char const* chough;
+};
+struct birdStruct const aName = {
+    .chough = "Henry",
+    .raven = "Lissy",
+    .magpie = "Frau",
+    .jay = "Joe",
+};
+```
+
+Isto é, das linhas 1 a 6 declaramos um novo tipo denotado por `struct birdStruct`. Esta estrutura tem quatro membros, cujas declarações parecem exatamente como declarações de variáveis comuns. Então, em vez de declarar quatro elementos que são conectados em uma matriz, aqui nomeamos os diferentes membros e declaramos tipos para eles. Tais declarações de um tipo estrutura apenas explica o tipo; não é (ainda) a declaração de um objeto daquele tipo e, menos ainda, uma definição para tal objeto.
+
+Em seguida, na linha 7, declaramos e definimos uma variável (chamada `aName`) do novo tipo. No inicializador e em usos posteriores, os membros individuais são designados usando uma notação com um ponto (.). Em vez de bird[raven] para uma matriz, como na seção 5.6.1, usamos aName.raven para a estrutura.
+
+Note que neste exemplo, os membros individuais, novamente, apenas referenciam as strings. Por exemplo, o membro aName.magpir referencia uma entidade "Frau" que está localizada fora da estrutura, não sendo considerada parte da `struct` em si.
+
+Para um segundo exemplo, vamos olhar uma maneira de organizar estampas temporais. Tempo de calendário é uma maneira complicada de contar, em anos, meses, dias, minutos, e segundos; os diferentes períodos temporais como meses e anos tem comprimentos diferentes, e assim por diante. Uma forma possível de organizar tais dados para os 9 tipos de dados diferentes que precisamos para tais estampas temporais poderia ser uma matriz:
+
+```
+typedef int calArray[9];
+```
+
+A utilização deste tipo matriz seria ambíguo: armazenaríamos o ano no elemento [0] ou [5]? Para evitar tais ambiguidades, poderíamos certamente usar, novamente, nosso truque com uma `enum`. Mas o padrão C escolheu uma forma diferente. Em <time.h>, ele usa um `struct` que é similar ao seguinte:
+
+```
+struct tm{
+    int tm_sec;     // Segundos após o minuto       [0, 60]
+    int tm_min;     // Minutos após a hora          [0, 59]
+    int tm_hour;    // Horas desde a meia-noite     [0, 23]
+    int tm_mday;    // Dia do mês                   [0, 31]
+    int tm_mon;     // Meses desde Janeiro          [0, 11]
+    int tm_year;    // Anos desde 1900
+    int tm_wday;    // Dias desde Domingo           [0, 6]
+    int tm_yday.    // Dias desde Janeiro           [0, 365]
+    int tm_isdst    // Bandeira de Horas de Economia de Luz
+};
+```
+
+Este `struct` tem *membros nomeados*, como tm_sec, para os segundos, tm_year para o ano etc. Codificar uma data, como a data de escrita, é relativamente simples:
+
+```
+struct tm today = {
+    .tm_year = 2026-1900,
+    .tm_mon = 3-1,
+    .tm_mday = 13,
+    .tm_hour = 16,
+    .tm_min = 41,
+    .tm_sec = 47,
+};
+```
+
+Isto cria uma variável do tipo struct tm e inicializa seus membros com os valores apropriados. A ordem ou posição dos membros na estrutura não é, normalmente, importante. Usar o nome do elemento precedido por um ponto é suficiente para especificar onde o dado correspondente deve ir.
+
+Acessas os membros da estrutura é tão simples quanto, possuindo a sintaxe de ponto similar:
+
+```
+printf("este ano é %d, próximo ano será %d\n",
+        today.tm_year+1900m today.tm_year+1900+1);
+```
+
+Uma referência a um membro como today.tm_year pode aparecer em uma expressão como qualquer variável do mesmo tipo base. 
+
+Existem outros três membros em struct tm que não mencionamos em nossa lista de inicialização: tm_wday, tm_yday e tm_isdst. Como não os definimos, eles são automaticamente definidos como 0.
+
+*Inicializadores de structs omitidos definem o membro correspondente como 0.*
+
+Isto permite até o extremo onde nenhum dos membros é inicializado. Então, quando inicializamos o struct tm como fizemos aqui, a estrutura de dados não é consistente; os membros tm_wday e tm_yday não tem valores que corresponderiam aos valores dos demais membros. Uma função que define este membro como um valor consistente com os outros poderia ser algo como:
+
+```
+struct tm time_set_yday(struct tm t) {
+    // tm_mdays iniciam em 1
+    t.tm_yday += DAYS_BEFORE[t.tm_mon] + t.tm_mday - 1;
+    // leva em conta anos bissextos
+    id ((t.tm_mon > 1) && leapyear(t.tm_year+1900))
+        ++t.tm_yday;
+    return t;
+}
+```
+
+Ela usa o número de dias dos meses precedentes ao atual, o membro tm_mday e o fator corretivo eventual considerando anos bissextos para computar o dia no ano. Esta função tem uma particularidade que é importante no nosso nível atual: ela modifica apenas o membro do parâmetro da função, t, e não o objeto original.
+
+*Parâmetros de struct são passados por valor.*
+
+Para manter as mudanças, temos de reatribuir o resultado da função ao original:
+
+```
+today = time_set_yday(today);
+```
+
+Mais tarde, ao estudar os tipos pointer, veremos como superar esta restrição para funções. Aqui, vemos que o operador atribuição = é bem definido para todos os tipos estrutura. Infelizmente, suas contrapartidas para comparação não são.
+
+*Estruturas podem ser atribuídas(=).*
+*Estruturas não podem ser comparadas com == nem !=.*
+
+A listagem 6.3 mostra o código completo para o uso da struct tm. Ele não contém uma declaração do struct tm histórico pois isto é fornecido através do cabeçalho padrão <time.h>. Hoje em dia, os tipos para membros individuais provavelmente seriam escolhidos de forma diferente. Mas muitas vezes em C temos de manter as decisões de design que foram feitas no passado.
+
+*O layout de uma estrutura é uma decisão de design importante*
 
 
+6.3.2 Estruturas com campos de diferentes tipos
 
+Outra aplicação de struct é agrupar objetos de tipos diferentes em um objeto maior envolvendo-os. Novamente, para manipular tempos com uma granularidade de nanosegundos, o padrão C já fez a escolha:
 
+```
+struct timespec {
+    time_t tv_sec;      // Segundos inteiros >= 0
+    long tv_nsec;       // Nanosegundos         [0, 9999999999]
+};
+```
+
+Aqui, vemos o tipo opaco time_t que já encontramos na seção 5.2 para os segundos, e um long para os nanosegundos. Novamente, as razões dessa escolha são históricas: hoje em dia, os tipos escolhidos poderiam ter sido diferentes. Para computar a diferença entre dois tempos struct timespec, podemos definir uma função facilmente.
+
+Enquanto a função difftime é parte do padrão C, tal funcionalidade aqui é muito simples, não baseada em propriedades específicas de plataforma. Assim, pode ser facilmente implementada por quem precisar.
+
+6.3.3 Estruturas aninhadas
+
+Qualquer tipo de dado fora uma matriz de comprimento variável é permitido como membro em uma estrutura. Assim, estruturas podem ser aninhadas no sentido que um membro de uma estrutura pode, também, ser (outro) tipo struct, e a estrutura menor pode até ser declarada dentro da maior:
+
+```
+struct person {
+    char name[256];
+    struct stardate {
+        struct tm date;
+        struct timespec precision;
+    } bdate;
+};
+```
+
+Uma visão estrutural é mostrada na figura 6.1 AS caixas cinzas correspondem a um possível preenchimento (padding), um conceito que veremos na discussão na sequência.
+
+![Struct layout](imagens/struct_layout.png)
+
+De forma bem diferente que para outras linguagens de programação, como C++, a visibilidade da declaração struct stardate é a mesma que para struct person. Um struct (nesse exemplo, person) não define um novo escopo para um outro struct (aqui, stardate) que seja definido dentro das chaves {} da declaração do struct externo. Isto é, se as declarações struct aninhadas aparecerem globalmente, ambos structs são visíveis globalmente no arquivo C. Se aparecerem dentro do corpo de uma função, sua visibilidade fica ligada à declaração composta {} na qual são encontrados.
+
+Portanto, uma versão mais adequada seria:
+
+```
+struct stardate {
+    struct tm date;
+    struct timespec precision;
+};
+struct person {
+    char name[256];
+    struct stardate bdate;
+};
+```
+
+Nesta versão, todos os structs são colocados no mesmo nível pois, no final das contas, seu acabam tendo o mesmo escopo. Entretanto, isso não alteraa visualização estrutural apresentada na Figura 6.1.
+
+6.3.4 Campos de estrutura coalescente
+
+Já vimos que o compilador coloca os campos de uma estrutura na mesma ordem no armazenamento em que são definidas. Se os campos tem tamanhos diferentes, o compilador pode querer colocá-las em posições específicas da estrutura. A razão principal disso é a facilidade de acesso desse tais campos; devido à organização do armazenamento em palavras que contem diversos bytes, poderia ser melhor iniciar um novo campo no limite de tal palavra. Veremos esse recurso, chamado alinhamento, na seção 12.7. O alinhamento pode levar a algum espaço desperdiçado após qualquer campo, chamado enchimento de bytes (byte padding), as áreas cinzas do esquema da figura 6.1. Se existem, esses enchimentos sempre consistirão de 1  ou vários bytes.
+
+Uma das possibilidades para reduzir o desperdício é escolher um ordenamento específico dos membros. 
+
+Outro possível disperdício de bits e bytes em nossa estrutura pode originar do uso ineficiente. Lembre-se que usamos valores sem sinal para representar conjuntos de pássaros. Efetivamente, precisávamos apenas de 4 bits dentro do unsigned; todos os outros bits foram desperdiçados. Este fenômeno é chamado *enchimento de bits*(bit padding) pois, diferente do byte padding, em geral, não cai nos limites de bytes e pode ir até bits individuais.
+
+Este desperdício é bastante alto na estrutura predefinida tm. Por exemplo, um campo como tm_sec tem apenas 61 valores possíveis, sendo possível armazená-lo em 6 bits em vez dos, pelo menos, 16 bits que compõe um número int. Tradicionalmente, C tem um mecanismo chamado campo de bit(bit-field) que pode ser usado para reduzir os bits que um membro de uma estrutura ocupa:
+
+```
+// *** Possui erros, não use isso! ***
+struct tib {
+    int tib_sec     :6;     // segundos
+    int tib_min     :6;     // minutos
+    int tib_hour    :5;     // horas
+    int tib_mday    :5;     // dia do mês
+    int tib_mon     :4;     // mes
+    int tib_year;           // ano
+    int tib_wday    :3;     // dia da semana
+    int tib_yday    :9;     // dia do ano
+    int tib_isdst   :1;     // daylight saving time
+};
+```
+
+Isto é, colocamos o número de bits que precisamos após a declaração do membro, separado pelo caractere dois pontos :. Assim, nesse caso, indicamos que precisamos de, pelo menos, 39 bits para os campos de bits (além de sizeof(int)*CHAR_BIT bits para o int) para representar todos os valores que nos interessam. Então, o compilador deve organizar a estrutura coalescendo os campos de bit sucessivos em unidades maiores. Um esquema comum aqui poderia ser agrupar os primeiros 5 campos com seus 28 bits em uma unidade do tamanho de um int, e deixar tib_year em um int separado, tendo então outra unidade para os 13 bits finais. Em vez de 9 * sizeof(int), este esquema usa apenas 3 * sizeof(int), três vezes menos.
+
+Tudo isso ainda é usado como antes, um designador x.tib_year pode ser usado em expressões ou em atribuições como o correspondente em struct tm, e inicializadores como .tib_mon=3 funcionam como esperado.
+
+Mas os campos de bit tradicionais, apresentados anteriormente, tem alguns problemas e, portanto, o código que é mostrado aqui pode ser incorreto. Primeiro, a especificação de int para um campo de bits pode corresponder a um tipo signed ou unsigned. Em algumas arquiteturas, onde int como aqui significa unsigned, o código está, de fato, correto. Na (maioria) das arquiteturas onde o campo é signed, falta um bit para a representação da maioria dos campos. Por exemplo, se o campo tib_mday tem 5 bits e é signed, pode armazenar os valores -16, ..., 15. Uma atribuição como x.tib_mday = 31 tem um valor fora dessa faixa.
+
+Esta falha de concepção (design) pode ser evitada revisitando a especificação. Poderíamos aumentar todas as especificações acrescentado 1 bit de sinal. Mas então para nosso exemplo, os 5 primeiros campos já precisariam de 33 bits e, na maioria das arquiteturas, não poderá armazenar em uma única unidade. A outra possiblidade é usar unsigned para todos os campos de bits, que é o mais recomendado.
+
+Também existe um segundo problema a campos-bit nas versões anteriores a C23, que o tipo ao qual um campo-bit resolve em uma expressão (como x.tib_mday) não é suficientemente especificado pelo padrão, e compiladores atualmente divergem. Isto não é algo que se possa observar no nível atual, mas pode atrapalhar muito mais tarde, quando tentarmos inferir tipos para declarações ou chamadas de funções de tipo-genérico no capítulo 18. Com a introdução dos tipos _BitInt, agora podemos escrever:
+
+```
+struct tbi {
+    unsigned _BitInt (6) tib_sec    :6;
+    unsigned _BitInt (6) tib_min    :6;
+    unsigned _BitInt (5) tib_hour   :5;
+    unsigned _BitInt (5) tib_mday   :5;
+    unsigned _BitInt (4) tib_mon    :4;
+    unsigned _BitInt     tib_year;
+    unsigned _BitInt (3) tib_wday   :3; 
+    unsigned _BitInt (9) tib_yday   :9;
+    bool                 tib_isdst  :1;
+};
+```
+
+Aqui, todos os campos-bit tem exatamente o tipo e comportam-se exatamente como especificado. Os tipos que são explicitamente especificados como tipos unsigned comportam-se como tal.
+
+*Use um tipo _BitInt(N) para um campo-bit numério de largura N.*
+
+*Use bool como tipo de um campo-bit de flag de largura 1.*
+
+## 6.4 Novos nomes para tipos: apelidos(aliases) de tipos
