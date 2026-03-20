@@ -483,3 +483,39 @@ Aqui, todos os campos-bit tem exatamente o tipo e comportam-se exatamente como e
 *Use bool como tipo de um campo-bit de flag de largura 1.*
 
 ## 6.4 Novos nomes para tipos: apelidos(aliases) de tipos
+Como vimos na seção anterior, uma estrutura introduz não apenas uma maneira de agregar informações diferentes em uma unidade mas também um novo nome de tipo para o agregado. Por razões históricas, o nome que introduzimos para a estrutura sempre deverá ser precedido pela palavra chave struct, que torna seu uso um pouco desajeitado. Existe uma ferramenta geral que nos ajuda a evitar isto ao dar um nome simbólico a um tipo já existente: **`typedef`**. Usando isso, um tipo pode ter vários nomes, e podemos reutilizar o nome dado (tag name) na declaração da estrutura:
+
+```
+typedef struct birdStruct birdStructure;
+typedef struct birdStruct birdStruct;
+```
+
+Então, struct birdStruct, birdStruct e birdStructure podem ser usados com efeito idêntico. Pode-se também usar:
+
+```
+typedef struct birdStruct birdStruct;
+struct birdStruct {
+    ...
+};
+```
+
+Ou seja, preceder a declaração do struct com um typedef usando exatamente o mesmo nome. Isto funciona pois, na combinação de um struct com um nome na sequência, a tag é sempre válida, uma declaração preventiva(? forward declaration) da estrutura.
+
+C++ segue uma abordagem similar por padrão, de modo que esta estratégia tornará o código mais fácil de ler para pessoas que já conhecem C++.
+
+O mecanismo typedef pode ser usado para outros tipos além de estruturas. Para matrizes, poderia ser:
+
+```
+typedef double vector[64];
+typedef vector vecvec[16];
+vecvec A;
+typedef double matrix[16][64];
+matrix B;
+double C[16][64];
+```
+
+Aqui, typedef apenas introduz um novo nome para um tipo existente, com A, B e C tendo o mesmo tipo: double[16][64].
+
+*Um typedef apenas cria um apelido para um tipo, e não um novo tipo.*
+
+O C padrão usa bastante typedef internamente, como no size_t. Nomes que terminam com _t costumam ser usados para apelidos dados com typedef.
