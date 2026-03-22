@@ -25,7 +25,7 @@ Além de funções, C tem outras formas de transferência de controle incondicio
 * setjmp e longjmp podem ser usados para retornar incondicionalmente ao contexto que chamou
 * Certos eventos no ambiente de execução ou chamadas à função raise podem levantar sinais que passam controle a uma função especializada, um signal handler.
 
-## 7.1 Funções simples (pag 106)
+## 7.1 Funções simples
 
 Já vimos diversas funções e algumas declarações nos capítulos anteriores. Em todas elas, os parênteses tem um papel sintático importante. Eles são usados para declarações e definições de funções para encapsular a lista de declarações de parâmetros. Para chamadas de funçoes, elas guardam a lista de argumentos para aquela chamada concreta. Este papel sintático é similar às chaves de matrizes [].
 
@@ -66,5 +66,34 @@ Todos os returns de uma função devem ser consistentes com a declaração da fu
 
 *Alcançar o final do corpo de uma função é equivalente a uma declaração return sem expressão. Isso só é possível para funções que retornam void.*
 
+## 7.2 `main` é especial
 
+A função main é o ponto de entrada do programa, com seu protótipo sendo obrigatório pelo padrão C, mas sua implementação sendo feita pelo programador. Por isso, deve obedecer algumas regras: 
 
+* Primeiro, para cumprir diferentes necessidades, tem vários protótipos, um dos quais deve ser impementado. Dois deveriam sempre ser possíveis:
+
+´´´
+int main(void);
+int main(int argc, char* argv[argc+1]);
+´´´
+
+Então, qualquer plataforma C pode fornecer outras interfaces. Duas variações são bastante comuns:
+
+* Em algumas plataformas embarcadas (embedded) onde não se espera que main retorne ao sistema que a executa, o tipo de retorno pode ser void.
+* Em muitas plataformas, um terceiro parâmetro pode das acesso ao "ambiente".
+
+Não se deve depender da existência de coisas assim em outras plataformas. Se quer escrever código portável, fique com as duas formas "oficiais". Para elas, o valor de retorno int dá uma indicação ao sistema de execução se o programa executou corretamente: EXIT_SUCCESS ou EXIT_FAILURE indicam sucesso ou falha na execução do ponto de vista do programador. Eles são os únicos valores que funcionam em qualquer plataforma.
+
+Além disso, existe uma exceção especial para `main`, pois ela não precisa ter uma declaração de retorno explícita. *Chegar ao final de main é o equivalente a um return com EXIT_SUCCESS.*
+
+A função exit encerra o programa, encerrando a execução do programa exatamente como um return faria.. Seu protótipo é:
+
+```
+[[noreturn]] void exit(int status);
+```
+
+Também vemos que o protótipo de exit é especial pois tem um tipo void. Assim como uma declaração return, exit nunca falha. O atributo [[noreturn]] indica que a função nunca retorna ao ponto que a chamou (recurso do C23). Versões de C anteriores à 23 tinham a palavra chave _Noreturn e a macro noreturn, uma versão pretty-printed dela, que vinha com o cabeçalho stdnoreturn.h.
+
+O segundo protótipo de main tem outro recurso: argv, o vetor de argumentos de comando de linha. Cada um de argv[i] para i = 0, ..., argc é um pointer similar aos encontrados anteriormente. Como uma primeira aproximação, pode-se pensar neles como strings.
+
+Dos argumentos argv, dois possuem importância particular: argv[0] aponta para o nome da invocação do programa (não há uma regra, mas costuma ser o nome do executável), e argv[argc] é um pointer null. 
