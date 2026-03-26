@@ -26,7 +26,7 @@ if the same as the 64 bit version*/
 int tmult2(int x, int y) { 
     // Cast x*y as int64_t
     int64_t pll = (int64_t) x*y;
-    /* Realizes a right bitwise shift of 32 bits.
+    /* Executes a right bitwise shift of 32 bits.
 If it is zero, the multiplication can be done without overflow*/
 /* For negative numbers this shift is not zero due sign extension.*/
 return pll >> 32 == 0;
