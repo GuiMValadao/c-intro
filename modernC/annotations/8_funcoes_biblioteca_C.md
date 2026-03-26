@@ -177,3 +177,15 @@ Em particular, as últimas duas facilitam mais que outras variações de mesma f
 Elas podem ser mais difíceis de capturar para seus leitoras. Evite-as se puder.
 
 ## 8.3 Numéricos
+
+Funções numéricas são disponíveis com o cabeçalho <header.h>, mas é mais simples usar as macros de tipo-genérico disponíveis com <tgmath.h>. Basicamente, para todas as funções, ele tem uma macro que envia uma invocação, como um sin(x) ou pow(x, n), à função que inspeciona o tipo de x em seu argumento e para a qual o valor do tipo de retorno tem o mesmo tipo.
+
+As macros de tipo-genérico que são definidas tem número muito grande para descrever em detalhe aqui. A tabela 8.6 dá uma visão geral geral das funções que são fornecidas.
+
+![Tabela 8.6 funções numéricas de tipos de ponto flutuante](imagens/tabela8-6.png)
+
+![Tabela 8.6 continuação](imagens/tabela8-6-2.png)
+
+Atualmente, implementações de funções numéricas deveriam ser de alta qualidade, eficientes e ter precisão numérica bem controlada. Apesar de qualquer dessas funções poderem ser implementadas por um programador com conhecimento numérico suficiente, não deveria tentar substituí-las ou evitá-las. Muitas delas não são apenas implementadas como funções C mas também podem usar instruções específicas de processadores. Em particular, há boas chances de instruções de baixo nível serem usadas para todas as funções que inspecionam ou modificam internalidades de ponto flutuante, como carg, creal, fabs, frexp, ldwxp, llround, lround, nearbyint, rint, round, scalbn e trunc. Assim, substituí-las ou reimplementá-las em código próprio costuma ser uma má ideia.
+
+## 8.4 Input, Outpu e manipulação de arquivos(pg 126)
