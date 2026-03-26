@@ -119,3 +119,61 @@ static_assert(sizeof(double) == sizeof(long double),
 Antes de C23, a palavra chave era escrita _Static_assert, e static_assert estava disponível de uma macro de <assert.h>;
 
 ## 8.2 Aritmética de inteiros
+
+A maioria das funcionalidades para aritmética com números inteiros já é definida por operadores. A biblioteca C acrescenta algumas funcionalidades e isso, onde não há notação fechada disponível ou onde necessita-se de atenção quando argumentos com valores específicos precisam de considerações especiais. A marioria dessas funções são novas no C23. A tabela 8.5 fornece uma vixsão geral.
+
+![Tabela 8.5 Funções para aritmética de inteiros](imagens/tabela8-5.png)
+
+Existem várias funções que dão acesso à aritmética de inteiros usual. AS primeiras duas famílias, abs e div, fazem parte do cabeçalho <stdlib.h>, e um prefixo `l` (L minúsculo) significa long, e ll long long. As funções abs são fornecidas como uma interface de conveniência pois C não tem uma notação fechada para o valor absoluto de um inteiro com sinal. Além disso, a expressão para ela, `(x < 0) ? -x : x` avaliaria x duas vezes.
+
+A função div é um pouco mais importante pois, simultaneamente, fornece o resultado de duas operações, quociente e resto:
+
+```
+auto res = div(x, y);
+printf("%d/%d is %d, remainder %d\n", x, y, res.quot, res.rem);
+```
+
+Os tipos de retorno dessas funções são estruturas, mas os nomes dessas estruturas não deveriam lhe preocupar demais. Com C23, é mais fácil capturar o valor retornado ao inferir seu tipo através de `auto` como feito acima. Para todas as três funções div, os valores específicos podem ser, então, acessados através dos membros quot e rem. Hoje em dia, a otimização dos compiladores é geralmente eficaz em coletar operações quociente e resto que podem ser juntas em uma única instrução, de modo que estas interfaces não são mais tão úteis.
+
+As operações de quociente e resto são bem definidas para a maioria dos valores; as exceções são a divisão por 0 e algumas combinações de INT_MIN e similares. Para as outras três operações aritméticas usuais, adição, subtração e multiplicação, existem muito mais situações. A escrita de código C correta que prevê se tal operação tem um resultado fora dos limites é relativamente desafiadora. Então, as próximas três funções de tipo gernérico na tabela foram acrescentadas em C23 com o novo cabeçalho <stdckdint.h>. Elas fornecem o resultado da operação através de seu primeiro argumento (que é um pointer) e retorna um Booleano que é true se houve transbordamento devido a operação. Em qualquer caso, a operação é válida incondicionalmente; o valor do resultado tem os bits menos significativos do resultado correto.:
+
+```
+unsigned result = 0;
+bool overflow = ckd_add(&result, UINT_MAX, UINT_MAX);
+printf("Overflow flag %s, result %x\n",
+        (overflow ? "true" : "false"),
+        result);
+```
+
+Aqui, todos os tipos são sem unsigned, então o resultado é apenas um módulo reduzido padrão da aritmética dos valores unsigned. No exemplo, isto é UINT_MAX-1.Além disso, o retorno da chamada é true para refletir que o resultado com precisão arbitrária tem o valor 2*UINT_MAX, que não cabe em unsigned.
+
+Podemos alterar o exemplo para tipos signed:
+
+```
+signed result = 0;
+bool overflow = ckd_add(&result, -INT_MAX, -INT_MAX);
+printf("Overflow flag %s, result %x\n",
+        (overflow ? "true" : "false"),
+        result);
+```
+
+A operação -INT_MAX + -INT_MAX transborda, então a avaliação dessa expressão causa falha no programa. Aqui, o resultado matemático é 2 * INT_MIN + 2, que também não cam em signed. A chamada, como apresentada, ainda é bem-definida, result tem todos os bits 0 exceto para o bit na posição 1, e o valor de retorno é true.
+
+As outras funções lidam com operações em bits. Também foram introduzidas pelo C23 com um novo cabeçalho, <stdlib.h>, e recebem qualquer valor inteiro unsigned do tipo padrão ou extendido como um argumento. Seu valor de retorno é como indicado na tabela 8.5. Note o seguinte:
+
+* Todas as funções tem resultados definidos para todos os valores de argumentos. É tarefa do compilado (e não sua) de lidar com casos especiais devido a hardware corretamente.
+* O primeiro conjunto de funções no grupo tem nomes descritivos que são derivados diretamente de uma definição tangível da propriedade de um número. Prefira esses aos outros para melhorar a legibilidade do seu código.
+* O segundo conjunto são todos variações que lidam com a magnitude do argumento ou de seu complemento. Use-os apenas se estiver interessado no resultado dos casos excepcionais como eles são dados. Se precisar lidar você mesmo com casos excepcionais, use stdc_bit_width, seu compilador sabe melhor que você como otimizar tais expressões condicionais.
+* Os resultados das seguintes funções são independente do tipo do argumento:    
+        stdc_bit_floor stdc_bit_width stdc_count_ones
+        stdc_has_single_bit stdc_first_trailing_one
+                stdc_first_trailing_zero
+Em particular, as últimas duas facilitam mais que outras variações de mesma funcionalidade.
+* Os resultados das seguintes funções dependem na largura do tipo do argumento:
+        stdc_bit_ceil stdc_count_zeros stdc_first_leading_one
+            stdc_first_leading_zero stdc_leading_ones
+            stdc_leading_zeros stdc_trailing_ones
+                    stdc_trailing_zeros
+Elas podem ser mais difíceis de capturar para seus leitoras. Evite-as se puder.
+
+## 8.3 Numéricos
