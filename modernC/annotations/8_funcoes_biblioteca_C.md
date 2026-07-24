@@ -188,4 +188,144 @@ As macros de tipo-genérico que são definidas tem número muito grande para des
 
 Atualmente, implementações de funções numéricas deveriam ser de alta qualidade, eficientes e ter precisão numérica bem controlada. Apesar de qualquer dessas funções poderem ser implementadas por um programador com conhecimento numérico suficiente, não deveria tentar substituí-las ou evitá-las. Muitas delas não são apenas implementadas como funções C mas também podem usar instruções específicas de processadores. Em particular, há boas chances de instruções de baixo nível serem usadas para todas as funções que inspecionam ou modificam internalidades de ponto flutuante, como carg, creal, fabs, frexp, ldwxp, llround, lround, nearbyint, rint, round, scalbn e trunc. Assim, substituí-las ou reimplementá-las em código próprio costuma ser uma má ideia.
 
-## 8.4 Input, Outpu e manipulação de arquivos(pg 126)
+## 8.4 Input, Output e manipulação de arquivos
+
+Já vimos algumas das funções IO presentes no cabeçalho <stdio.h>: puts e printf. Enquanto a segunda permite formatar uma saída para uma forma conveniente, a primeira apenas exibe uma string (seu argumento) e um caractere de final de linha.
+
+8.4.1 Saída de texto sem formatação
+
+Existe uma função ainda mais básica que puts: putchar, que exibe um único caractere. As interfaces de ambas funções são as seguintes:
+
+```
+int putchar(int c);
+int puts(char const s[static 1]);
+```
+
+O tipo int como parâmetro para putchar é um acidente histórico que não deve incomodar. Diferente disso, ter um tipo de retorno int é necessário para que a função possa retornar sem erros para o ponto que a chamou. Em particular, ela retorna o argumento c se teve sucesso e um valor específico negativo EOF(end-of-file) que é garantido não corresponder a qualquer caractere ao ocorrer alguma falha.
+
+Com essa função, poderíamos até reimplementar puts por nós mesmos, por exemplo:
+
+```
+int puts_manually(char const s[static 1]) {
+    for (size_t i = 0; s[i]; ++i) {
+        if (putchar(s[i]) == EOF) return EOF;
+    }
+    if (putchar('\n') == EOF) return EOF;
+    return 0;
+}
+```
+
+Até aqui, vimos apenas como ter uma saída para o terminal. Frequentemente, você irá querer escrever resultados em armazenamento permanente, e o tipo FILE* para streams(fluxos?) fornece uma abstração para isso. Existem duas funções, fputs e fputc, que generalizam a ideia de uma saída sem formatação para fluxos:
+
+```
+int fputc(int c, FILE* stream);
+int fputs(char const s[static 1], FILE* stream);
+```
+
+Aqui, o asterisco no tipo FILE* indica que ele é do tipo pointer. Por hora, só precisamos saber que um pointer pode ser testado para determinar se ele é nulo,para podermos detectar se um fluxo é válido.
+
+O identificador FILE representa um tipo opaco, para o qual não conhecemos mais do que é fornecido pelas interfaces funcionais que veremos nessa seção.
+
+Se não fizermos nada especial, dois fluxos tem disponibilidade para a saída: stdout e stderr. Já usamos stdout implicitamente: é o que putchar e puts usam debaixo do capô, e este fluxo é, geralmente, conectado ao terminal. stderr pe similar e também conectado ao terminal por padrão, talvez com propriedades ligeiramente diferentes. Em qualquer caso, os dois são proximamente relacionados. O propósito de se ter ambos é sermos capazes de distinguir a saída "usual"(stdout) de saída "urgente"(stderr).
+
+Podemos reescrever as funções anteriores em termos das mais gerais:
+
+```
+int putchar_manually(int c) {
+    return fputc(c, stdout);
+}
+int puts_manually(char const s[static 1]) {
+    if (fputs(s, stdout) == EOF) return EOF;
+    if (fputc('\n', stdout) == EOF) return EOF;
+    return 0;
+}
+```
+
+*puts e fputs diferem em como lidam com o final da linha(puts acrescenta o caractere de final de linha e fputs não).*
+
+8.4.2 Arquivos e fluxos
+
+Para escrever em arquivos de fato, temos que acrescentar os arquivos à execução do programa usando a função fopen:
+
+```
+FILE* fopen(char const path[static 1], char const mode[static 1]);
+FILE* freopen(char const path[static 1], char const mode[static 1], FILE *stream);
+```
+
+Isto pode ser usado de forma tão simples quanto:
+
+```
+int main(int argc, char* argv[argc+1]) {
+    FILE* logfile = fopen("mylog.txt", "a");
+    if (!logfile) {
+        perror("fopen failed");
+        return EXIT_FAILURE;
+    }
+    fputs("felling fine today\n", logfile);
+    return EXIT_SUCCESS;
+}
+```
+
+Isto abre um arquivo, nesse exemplo "mylog.txt", no sistema de arquivos e fornece acesso a ele através da variável logfile. O argumento de modo "a" abre o arquivo para anexação, ou seja, o conteúdo é preservado se existir, e a escria inicia depois do que já havia.
+
+Existem várias razões para que a abertura de um arquivo dê errado: por exemplo, o sistema de arquivos pode estar cheio, ou o processo poderia não ter permissão de escrever no local indicado. Checamos por tais erros na condição, e encerramos o programa se necessário.
+
+A função perror é usada para dar um diagnóstico do erro que aconteceu, sendo similar a `fputs("fopen failed: some-diagnostic\n", stderr);`. Este "some-diagnostic" poderia (mas não necessáriamente) dar mais informações para ajudar o usuário do programa a lidar com o erro.
+
+Também existem os substitutivos que checam os limites fopen_s e freopen_s, que garantem que os argumentos que são passados são pointers válidos. Aqui, errno_t é um tipo que vem com <stdlib.h> e codifica retornos de erro. A palavra chave restrict também é nova aqui, e apenas aplica a tipos pointer, não cabendo sua explicação aqui:
+
+```
+errno_t fopen_s(FILE* restrict streamptr[restrict], 
+                char const filename[restrict], char const mode[restrict])
+;
+errno_t freopen_s(FILE* restrict newstreamptr[restrict], 
+                char const filename[restrict], char const mode[restrict],
+                FILE* restrict stream);
+```
+
+Existem diferentes formas de abrir arquivos; pode ser "r" para somente leitura, "w" para somente escrita (e apagar tudo que já existir no arquivo antes da escrita) além de "a". Também existem 3 modificadores: +, abre o arquivo para leitura e escrita, b, visualiza como um arquivo binário, e x cria um arquivo para escrita caso ainda não exista. Além disso, pode-se combinar um dos modos com um ou mais dos modificadores.
+
+Portanto, os fluxos podem ser abertos não somente para escrita mas também para leitura; veremos na sequência como isto é feito. Os modificadores são menos usados em programação cotidiana. O modo "Update", (+), deve ser usado com cuidado. Leitura e escrita simultaneamente não é fácil e requer cuidado especial. Para b, discutiremos a diferença entre fluxos de texto e binário na seção 14.6.
+
+Existem outras três interfaces principais para lidar com fluxos, freopen, fclose e fflush:
+
+```
+FILE *freopen(const char *pathname, const char *mode, FILE *stream);
+int fclose(FILE* fp);
+int fflush(FILE* stream);
+```
+
+A utilização primária de freopen e fclose são bem diretas. A primeira pode associas um dado fluxo a um arquivo diferente e, eventualmente, alterar o modo. Isto é útil para associar os fluxos padrões para um arquivo. Por exemplo, o programa simples da discussão anterior poderia ser reescrito como:
+
+```
+int main(int argc, char* argv[argc+1]) {
+    if (!freopen("mylog.txt", "a", stdout)) {
+        perror("freopen failed");
+        return EXIT_FAILURE;
+    }
+    puts("feeling fine today");
+    return EXIT_SUCCESS;
+}
+```
+
+8.4.3 IO de textos
+
+A saída para fluxos de textos é, normalmente, buffered; isto é, para fazer uso mais eficiente de seus recursos, o sistema IO pode atrasar a escrita física de algo para um fluxo. Se fecharmos o fluxo com fclose, garante-se que todos os buffers são descarregados (flushed) para onde devem ir. A função fflush é necessária onde queremos ver a saída imediatamente no terminal ou onde não queremos fechar o arquivo ainda mas queremos garantir que todo o conteúdo que já escrevemos chegou ao seu destino corretamente. O programa 8.1 mostra um exemplo que escreve 10 pontos para o stdout com um atraso de aproximadamente um segundo entre todas as escritas. A forma mais comum de IO buffering para arquivos de texto é buffering de linha. Nesse modo, a saída só é físicamente escrita se o fim de uma linha de texto é encontrado. Assim, normalmente, texto escrito com puts aparece imediatamente no terminal; fputs espera até encontrar um \n na saída. Outra coisa interessante sobre fluxos de texto e arquivos é que não existe uma correspondência de um para um entre caracteres que são escritos no programa e bytes que acabam no console do dispositivo ou no arquivo.
+
+**Entrada e saída de texto converte dados.** Isso ocorre pois as representações internas e externas de caracteres de texto não são necessariamente as mesmas. Infelizmente, ainda existem muitas codificações de caracteres diferentes; a biblioteca C é responsável por converter corretamente se puder. Em particular, a codificação de fim da linha em arquivos depende da plataforma. **Existem três conversões comumente usadas para codificar o fim da linha.**
+
+C nos dá uma abstração bem apropriada ao usar \n para isso, independente da plataforma. Outra modificação que você deveria estar ciente ao lidar com IO de texto é que espaços em branco que precedem o fim de linha podem ser suprimidos. Portanto, a presença de espaços em branco residuais(? trailing white space) como caractere de vazio ou tabulação não são confiáveis e deveriam ser evitados. **Linhas de texto não deveriam conter espaços em branco residuais no fim da linha.**
+
+A biblioteca C também tem suporte muito limitado para manipular arquivos dentro do sistema de arquivo:
+
+```
+int remove(char const pathname[static 1]);
+int rename(char const oldpath[static 1], char const newpath[static 1]);
+```
+
+8.4.4 Saída formatada (pg 131-fim 130)
+
+
+
+
+
