@@ -1,0 +1,5 @@
+cl -Wall /Fahello -Og /Fe[hello] hello_world.c
+
+-Og is deprecated; 
+/Fe[name] names the executable file. Used as /Fefile_name;
+/Fa[name] saves the assembly version of the program;
